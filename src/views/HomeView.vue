@@ -128,6 +128,13 @@ export default {
              this.pickupDate
     }
   },
+  created() {
+    console.log('Initializing Stripe with key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+    this.stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+    if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+      console.error('Stripe publishable key is not set in environment variables');
+    }
+  },
   methods: {
     calculateTotal() {
       let total = this.price * this.quantity
