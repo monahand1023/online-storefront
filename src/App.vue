@@ -1,7 +1,3 @@
-import { googleSheetsLogger } from './services/googleSheetsLogger';
-import { loadStripe } from '@stripe/stripe-js';
-
-
 <!-- src/App.vue -->
 <template>
   <div class="store-container">
@@ -30,14 +26,22 @@ import { loadStripe } from '@stripe/stripe-js';
         </div>
       </div>
       
-      <button @click="handleCheckout" class="checkout-button">
-        Checkout (Total: ${{ (price * quantity).toFixed(2) }})
+      <div v-if="error" class="error-message">
+        {{ error }}
+      </div>
+
+      <button 
+        @click="handleCheckout" 
+        class="checkout-button"
+        :disabled="isLoading">
+        {{ isLoading ? 'Processing...' : `Checkout (Total: $${(price * quantity).toFixed(2)})` }}
       </button>
     </div>
   </div>
 </template>
 
 <script>
+import { loadStripe } from '@stripe/stripe-js'
 
 export default {
   data() {
@@ -46,31 +50,34 @@ export default {
       selectedSize: 'M',
       quantity: 1,
       sizes: ['S', 'M', 'L', 'XL'],
-      isLoading: false
+      isLoading: false,
+      error: null,
+      stripePromise: null
+    }
+  },
+  async created() {
+    // Initialize Stripe when component is created
+    try {
+      this.stripePromise = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+      if (!this.stripePromise) {
+        throw new Error('Failed to initialize Stripe')
+      }
+    } catch (error) {
+      console.error('Stripe initialization error:', error)
+      this.error = 'Failed to initialize payment system'
     }
   },
   methods: {
     async handleCheckout() {
-      this.isLoading = true;
+      this.isLoading = true
+      this.error = null
       
       try {
-        // Log transaction initiation
-        await googleSheetsLogger.logTransaction({
-          amount: this.price * this.quantity,
-          quantity: this.quantity,
-          size: this.selectedSize,
-          status: 'initiated'
-        });
-        
-        console.log('Starting checkout process...');
-        
-        const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-        if (!stripe) {
-          throw new Error('Failed to load Stripe');
+        if (!this.stripePromise) {
+          throw new Error('Payment system not initialized')
         }
-        console.log('Stripe loaded successfully');
-        
-        console.log('Sending request to create checkout session...');
+
+        console.log('Creating checkout session...')
         const response = await fetch('/.netlify/functions/create-checkout', {
           method: 'POST',
           headers: {
@@ -80,47 +87,32 @@ export default {
             quantity: this.quantity,
             size: this.selectedSize,
           }),
-        });
+        })
+        
+        console.log('Response status:', response.status)
         
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+          const errorText = await response.text()
+          console.error('Checkout error response:', errorText)
+          throw new Error(`Checkout failed: ${errorText}`)
         }
         
-        const session = await response.json();
-        console.log('Checkout session created:', session);
-        
-        // Log successful checkout session creation
-        await googleSheetsLogger.logTransaction({
-          amount: this.price * this.quantity,
-          quantity: this.quantity,
-          size: this.selectedSize,
-          status: 'checkout_created'
-        });
+        const session = await response.json()
+        console.log('Session created:', session)
         
         // Redirect to Stripe Checkout
-        const result = await stripe.redirectToCheckout({
-          sessionId: session.id,
-        });
+        const result = await this.stripePromise.redirectToCheckout({
+          sessionId: session.id
+        })
         
         if (result.error) {
-          console.error('Stripe redirect error:', result.error);
-          throw new Error(result.error.message);
+          throw new Error(result.error.message)
         }
       } catch (error) {
-        console.error('Detailed error:', error);
-        
-        // Log failed transaction
-        await googleSheetsLogger.logTransaction({
-          amount: this.price * this.quantity,
-          quantity: this.quantity,
-          size: this.selectedSize,
-          status: 'failed'
-        });
-        
-        alert(`Checkout error: ${error.message}`);
+        console.error('Checkout error:', error)
+        this.error = error.message
       } finally {
-        this.isLoading = false;
+        this.isLoading = false
       }
     }
   }
@@ -184,7 +176,21 @@ select {
   font-size: 16px;
 }
 
-.checkout-button:hover {
+.checkout-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.checkout-button:not(:disabled):hover {
   background-color: #45a049;
+}
+
+.error-message {
+  color: #dc3545;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  background-color: #f8d7da;
 }
 </style>
