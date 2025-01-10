@@ -8,88 +8,130 @@
       <h2>Limited Edition T-Shirt</h2>
       <p class="price">${{ price.toFixed(2) }}</p>
       
-      <div class="product-options">
-        <div class="size-selector">
-          <label for="size">Size:</label>
-          <select v-model="selectedSize" id="size">
-            <option v-for="size in sizes" :key="size" :value="size">
-              {{ size }}
-            </option>
-          </select>
+      <form @submit.prevent="handleCheckout" class="order-form">
+        <div class="product-options">
+          <div class="size-selector">
+            <label for="size">Size: <span class="required">*</span></label>
+            <select 
+              v-model="selectedSize" 
+              id="size" 
+              required
+              :class="{ 'error-input': showErrors && !selectedSize }"
+            >
+              <option value="">Select a size</option>
+              <option v-for="size in sizes" :key="size" :value="size">
+                {{ size }}
+              </option>
+            </select>
+          </div>
+          
+          <div class="quantity-selector">
+            <label for="quantity">Quantity: <span class="required">*</span></label>
+            <select 
+              v-model="quantity" 
+              id="quantity" 
+              required
+              :class="{ 'error-input': showErrors && !quantity }"
+            >
+              <option value="">Select quantity</option>
+              <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="student-info">
+          <div class="form-group">
+            <label for="grade">Student's Grade: <span class="required">*</span></label>
+            <select 
+              v-model="studentGrade" 
+              id="grade" 
+              required
+              :class="{ 'error-input': showErrors && !studentGrade }"
+            >
+              <option value="">Select grade</option>
+              <option v-for="grade in grades" :key="grade" :value="grade">
+                {{ grade === 'K' ? 'Kindergarten' : `Grade ${grade}` }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="program">Program: <span class="required">*</span></label>
+            <select 
+              v-model="program" 
+              id="program" 
+              required
+              :class="{ 'error-input': showErrors && !program }"
+            >
+              <option value="">Select program</option>
+              <option v-for="prog in programs" :key="prog" :value="prog">
+                {{ prog }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="pickupName">Who will pick up the t-shirt? <span class="required">*</span></label>
+            <input 
+              type="text" 
+              id="pickupName" 
+              v-model="pickupName" 
+              placeholder="Enter full name"
+              required
+              :class="{ 'error-input': showErrors && !pickupName.trim() }"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="pickupDate">Pickup Date: <span class="required">*</span></label>
+            <select 
+              v-model="pickupDate" 
+              id="pickupDate" 
+              required
+              :class="{ 'error-input': showErrors && !pickupDate }"
+            >
+              <option value="">Select pickup date</option>
+              <option v-for="date in pickupDates" :key="date" :value="date">
+                {{ date }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="promoCode">Promo Code:</label>
+            <input 
+              type="text" 
+              id="promoCode" 
+              v-model="promoCode" 
+              placeholder="Enter promo code"
+            >
+          </div>
         </div>
         
-        <div class="quantity-selector">
-          <label for="quantity">Quantity:</label>
-          <select v-model="quantity" id="quantity">
-            <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="student-info">
-        <div class="form-group">
-          <label for="grade">Student's Grade:</label>
-          <select v-model="studentGrade" id="grade">
-            <option v-for="grade in grades" :key="grade" :value="grade">
-              {{ grade === 'K' ? 'Kindergarten' : `Grade ${grade}` }}
-            </option>
-          </select>
+        <div v-if="error" class="error-message">
+          {{ error }}
         </div>
 
-        <div class="form-group">
-          <label for="program">Program:</label>
-          <select v-model="program" id="program">
-            <option v-for="prog in programs" :key="prog" :value="prog">
-              {{ prog }}
-            </option>
-          </select>
+        <div v-if="validationErrors.length > 0" class="error-message">
+          <div>Please fill in all required fields:</div>
+          <ul>
+            <li v-for="(error, index) in validationErrors" :key="index">
+              {{ error }}
+            </li>
+          </ul>
         </div>
 
-        <div class="form-group">
-          <label for="pickupName">Who will pick up the t-shirt?</label>
-          <input 
-            type="text" 
-            id="pickupName" 
-            v-model="pickupName" 
-            placeholder="Enter full name"
-            required
-          >
+        <div v-if="discountApplied" class="discount-message">
+          40% discount applied!
         </div>
 
-        <div class="form-group">
-          <label for="pickupDate">Pickup Date:</label>
-          <select v-model="pickupDate" id="pickupDate">
-            <option v-for="date in pickupDates" :key="date" :value="date">
-              {{ date }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="promoCode">Promo Code:</label>
-          <input 
-            type="text" 
-            id="promoCode" 
-            v-model="promoCode" 
-            placeholder="Enter promo code"
-          >
-        </div>
-      </div>
-      
-      <div v-if="error" class="error-message">
-        {{ error }}
-      </div>
-
-      <div v-if="discountApplied" class="discount-message">
-        40% discount applied!
-      </div>
-
-      <button 
-        @click="handleCheckout" 
-        class="checkout-button"
-        :disabled="isLoading || !isFormValid">
-        {{ isLoading ? 'Processing...' : `Checkout (Total: $${calculateTotal()})` }}
-      </button>
+        <button 
+          type="submit"
+          class="checkout-button"
+          :disabled="isLoading">
+          {{ isLoading ? 'Processing...' : `Checkout (Total: $${calculateTotal()})` }}
+        </button>
+      </form>
     </div>
   </div>
 </template>
@@ -101,8 +143,8 @@ export default {
   data() {
     return {
       price: 25.00,
-      selectedSize: 'M',
-      quantity: 1,
+      selectedSize: '',
+      quantity: '',
       sizes: ['S', 'M', 'L', 'XL'],
       grades: ['K', '1', '2', '3', '4', '5'],
       programs: ['Spanish', 'Japanese'],
@@ -114,47 +156,63 @@ export default {
       promoCode: '',
       isLoading: false,
       error: null,
-      stripePromise: null
+      stripe: null,
+      showErrors: false
     }
   },
   computed: {
     discountApplied() {
       return this.promoCode.trim().toUpperCase() === 'JN-TSHIRT-DISCOUNT'
     },
-    isFormValid() {
-      return this.studentGrade && 
-             this.program && 
-             this.pickupName.trim() && 
-             this.pickupDate
+    validationErrors() {
+      if (!this.showErrors) return [];
+      
+      const errors = [];
+      if (!this.selectedSize) errors.push('Please select a size');
+      if (!this.quantity) errors.push('Please select a quantity');
+      if (!this.studentGrade) errors.push('Please select student\'s grade');
+      if (!this.program) errors.push('Please select a program');
+      if (!this.pickupName.trim()) errors.push('Please enter pickup person\'s name');
+      if (!this.pickupDate) errors.push('Please select a pickup date');
+      
+      return errors;
     }
   },
-  created() {
-    console.log('Initializing Stripe with key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-    this.stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-    if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
-      console.error('Stripe publishable key is not set in environment variables');
+  async created() {
+    try {
+      if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+        throw new Error('Stripe publishable key is not set');
+      }
+      this.stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+      if (!this.stripe) {
+        throw new Error('Failed to initialize Stripe');
+      }
+    } catch (error) {
+      console.error('Stripe initialization error:', error);
+      this.error = 'Failed to initialize payment system. Please refresh the page or try again later.';
     }
   },
   methods: {
     calculateTotal() {
-      let total = this.price * this.quantity
+      let total = this.price * (this.quantity || 0)
       if (this.discountApplied) {
         total *= 0.6 // Apply 40% discount
       }
       return total.toFixed(2)
     },
     async handleCheckout() {
-      if (!this.isFormValid) {
-        this.error = 'Please fill in all required fields'
-        return
+      this.showErrors = true;
+      if (this.validationErrors.length > 0) {
+        this.error = 'Please fill in all required fields';
+        return;
       }
 
-      this.isLoading = true
-      this.error = null
+      this.isLoading = true;
+      this.error = null;
       
       try {
-        if (!this.stripePromise) {
-          throw new Error('Payment system not initialized')
+        if (!this.stripe) {
+          throw new Error('Payment system not initialized');
         }
 
         const response = await fetch('/.netlify/functions/create-checkout', {
@@ -169,30 +227,27 @@ export default {
             program: this.program,
             pickupName: this.pickupName,
             pickupDate: this.pickupDate,
-            promoCode: this.promoCode,
             discountApplied: this.discountApplied
           }),
-        })
+        });
         
         if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`Checkout failed: ${errorText}`)
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Checkout failed');
         }
         
-        const session = await response.json()
+        const { id: sessionId } = await response.json();
         
-        const result = await this.stripePromise.redirectToCheckout({
-          sessionId: session.id
-        })
+        const { error } = await this.stripe.redirectToCheckout({ sessionId });
         
-        if (result.error) {
-          throw new Error(result.error.message)
+        if (error) {
+          throw new Error(error.message);
         }
       } catch (error) {
-        console.error('Checkout error:', error)
-        this.error = error.message
+        console.error('Checkout error:', error);
+        this.error = error.message || 'An error occurred during checkout. Please try again.';
       } finally {
-        this.isLoading = false
+        this.isLoading = false;
       }
     }
   }
@@ -200,40 +255,33 @@ export default {
 </script>
 
 <style scoped>
-/* Existing styles remain the same */
+/* Previous styles remain the same */
 
-.student-info {
-  margin: 20px 0;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+.required {
+  color: #dc3545;
+  margin-left: 2px;
 }
 
-.form-group {
-  margin-bottom: 15px;
+.error-input {
+  border-color: #dc3545 !important;
+  background-color: #fff8f8;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
+.order-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+.error-message ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
 }
 
-.discount-message {
-  color: #4CAF50;
-  padding: 10px;
-  margin: 10px 0;
-  border: 1px solid #4CAF50;
-  border-radius: 4px;
-  background-color: #e8f5e9;
+.error-message li {
+  color: #dc3545;
+  margin-top: 5px;
 }
+
+/* Rest of your existing styles */
 </style>
