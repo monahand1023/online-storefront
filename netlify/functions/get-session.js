@@ -21,14 +21,18 @@ export const handler = async (event) => {
   }
 
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['customer_details', 'line_items']
+    });
     
     return {
       statusCode: 200,
       body: JSON.stringify({
-        customer_email: session.customer_email,
+        customer_details: session.customer_details,
         amount_total: session.amount_total,
         payment_status: session.payment_status,
+        metadata: session.metadata,
+        line_items: session.line_items
       }),
     };
   } catch (error) {

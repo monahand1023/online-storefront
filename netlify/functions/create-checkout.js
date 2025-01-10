@@ -15,6 +15,10 @@ export const handler = async (event) => {
     
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
+      metadata: {
+        size,
+        quantity: quantity.toString()
+      },
       payment_method_types: ['card'],
       mode: 'payment',
       line_items: [
