@@ -12,8 +12,7 @@ export const handler = async (event) => {
 
   try {
     const { 
-      quantity, 
-      size, 
+      orders,
       studentGrade,
       program,
       pickupName,
@@ -26,29 +25,39 @@ export const handler = async (event) => {
 
     const successUrl = `${process.env.URL}/success?session_id={CHECKOUT_SESSION_ID}`;
     
+    // Create line items for each shirt order
+    const lineItems = orders.map(order => ({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: 'Event T-Shirt',
+          description: `Size: ${order.size}`,
+        },
+        unit_amount: finalAmount,
+      },
+      quantity: parseInt(order.quantity),
+    }));
+
+    // Create a summary of all orders for metadata
+    const ordersSummary = orders.map(order => 
+      `${order.quantity}x ${order.size}`
+    ).join(', ');
+
+    const totalQuantity = orders.reduce((sum, order) => 
+      sum + parseInt(order.quantity), 0
+    );
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Event T-Shirt',
-              description: `Size: ${size}`,
-            },
-            unit_amount: finalAmount,
-          },
-          quantity: quantity,
-        },
-      ],
+      line_items: lineItems,
       metadata: {
-        size,
-        quantity: quantity.toString(),
+        ordersSummary,
         studentGrade,
         program,
         pickupName,
         pickupDate,
+        totalQuantity: totalQuantity.toString(),
         discountApplied: discountApplied ? 'true' : 'false'
       },
       success_url: successUrl,

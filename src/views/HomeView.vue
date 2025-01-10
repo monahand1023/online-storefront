@@ -6,39 +6,80 @@
     <div class="product-card">
       <img src="/shirt-placeholder.jpg" alt="Event T-Shirt" class="product-image">
       <h2>Limited Edition T-Shirt</h2>
-      <p class="price">${{ price.toFixed(2) }}</p>
+      <p class="price">${{ price.toFixed(2) }} each</p>
       
       <form @submit.prevent="handleCheckout">
-        <div class="product-options">
-          <div class="size-selector">
-            <label for="size">Size: <span class="required">*</span></label>
-            <select 
-              v-model="selectedSize" 
-              id="size" 
-              required
-              :class="{ 'error-input': showErrors && !selectedSize }"
-            >
-              <option value="">Select a size</option>
-              <option v-for="size in sizes" :key="size" :value="size">
-                {{ size }}
-              </option>
-            </select>
-          </div>
-          
-          <div class="quantity-selector">
-            <label for="quantity">Quantity: <span class="required">*</span></label>
-            <select 
-              v-model="quantity" 
-              id="quantity" 
-              required
-              :class="{ 'error-input': showErrors && !quantity }"
-            >
-              <option value="">Select quantity</option>
-              <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
-            </select>
+        <!-- Multiple shirt orders section -->
+        <div class="shirt-orders">
+          <div v-for="(order, index) in shirtOrders" :key="index" class="shirt-order">
+            <div class="order-header">
+              <h3>Shirt Order #{{ index + 1 }}</h3>
+              <button 
+                v-if="shirtOrders.length > 1" 
+                type="button" 
+                class="remove-button"
+                @click="removeShirtOrder(index)"
+              >
+                Remove
+              </button>
+            </div>
+            
+            <div class="product-options">
+              <div class="size-selector">
+                <label :for="'size-' + index">Size: <span class="required">*</span></label>
+                <select 
+                  v-model="order.size" 
+                  :id="'size-' + index" 
+                  required
+                  :class="{ 'error-input': showErrors && !order.size }"
+                >
+                  <option value="">Select a size</option>
+                  <option v-for="size in sizes" :key="size" :value="size">
+                    {{ size }}
+                  </option>
+                </select>
+              </div>
+              
+              <div class="quantity-selector">
+                <label :for="'quantity-' + index">Quantity: <span class="required">*</span></label>
+                <select 
+                  v-model="order.quantity" 
+                  :id="'quantity-' + index" 
+                  required
+                  :class="{ 'error-input': showErrors && !order.quantity }"
+                >
+                  <option value="">Select quantity</option>
+                  <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
+        <button 
+          type="button" 
+          class="add-shirt-button"
+          @click="addShirtOrder"
+        >
+          + Add Another Shirt
+        </button>
+
+        <!-- Order summary -->
+        <div class="order-summary" v-if="totalQuantity > 0">
+          <h3>Order Summary</h3>
+          <div class="summary-items">
+            <div v-for="(order, index) in shirtOrders" :key="index" class="summary-item">
+              <template v-if="order.size && order.quantity">
+                {{ order.quantity }}x Size {{ order.size }}
+              </template>
+            </div>
+          </div>
+          <div class="summary-total">
+            Total Items: {{ totalQuantity }}
+          </div>
+        </div>
+
+        <!-- Student and pickup information -->
         <div class="student-info">
           <div class="form-group">
             <label for="grade">Student's Grade: <span class="required">*</span></label>
@@ -119,8 +160,8 @@
         <button 
           type="submit"
           class="checkout-button"
-          :disabled="isLoading">
-          {{ isLoading ? 'Processing...' : `Checkout (Total: $${calculateTotal()})` }}
+          :disabled="isLoading || totalQuantity === 0">
+          {{ checkoutButtonText }}
         </button>
       </form>
     </div>
@@ -134,12 +175,13 @@ export default {
   data() {
     return {
       price: 25.00,
-      selectedSize: '',
-      quantity: '',
       sizes: ['S', 'M', 'L', 'XL'],
       grades: ['K', '1', '2', '3', '4', '5'],
       programs: ['Spanish', 'Japanese'],
       pickupDates: ['2/15', '2/16', '2/17'],
+      shirtOrders: [
+        { size: '', quantity: '' }
+      ],
       studentGrade: '',
       program: '',
       pickupName: '',
@@ -154,6 +196,18 @@ export default {
   computed: {
     discountApplied() {
       return this.promoCode.trim().toUpperCase() === 'JN-TSHIRT-DISCOUNT'
+    },
+    totalQuantity() {
+      return this.shirtOrders.reduce((sum, order) => sum + (parseInt(order.quantity) || 0), 0)
+    },
+    subtotal() {
+      const amount = this.totalQuantity * this.price
+      return this.discountApplied ? amount * 0.6 : amount
+    },
+    checkoutButtonText() {
+      if (this.isLoading) return 'Processing...'
+      if (this.totalQuantity === 0) return 'Add items to cart'
+      return `Checkout (Total: $${this.subtotal.toFixed(2)})`
     }
   },
   async created() {
@@ -171,17 +225,20 @@ export default {
     }
   },
   methods: {
-    calculateTotal() {
-      let total = this.price * (this.quantity || 0)
-      if (this.discountApplied) {
-        total *= 0.6 // Apply 40% discount
-      }
-      return total.toFixed(2)
+    addShirtOrder() {
+      this.shirtOrders.push({ size: '', quantity: '' });
+    },
+    removeShirtOrder(index) {
+      this.shirtOrders.splice(index, 1);
+    },
+    validateOrders() {
+      return this.shirtOrders.every(order => order.size && order.quantity) &&
+             this.totalQuantity > 0;
     },
     async handleCheckout() {
       this.showErrors = true;
       
-      if (!this.selectedSize || !this.quantity || !this.studentGrade || 
+      if (!this.validateOrders() || !this.studentGrade || 
           !this.program || !this.pickupName.trim() || !this.pickupDate) {
         this.error = 'Please fill in all required fields';
         return;
@@ -201,8 +258,7 @@ export default {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            quantity: this.quantity,
-            size: this.selectedSize,
+            orders: this.shirtOrders,
             studentGrade: this.studentGrade,
             program: this.program,
             pickupName: this.pickupName,
@@ -363,5 +419,91 @@ select {
 
 .checkout-button:not(:disabled):hover {
   background-color: #45a049;
+}
+
+.shirt-orders {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.shirt-order {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #fff;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.order-header h3 {
+  margin: 0;
+  font-size: 1.1em;
+  color: #333;
+}
+
+.remove-button {
+  padding: 6px 12px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.remove-button:hover {
+  background-color: #c82333;
+}
+
+.add-shirt-button {
+  width: 100%;
+  padding: 12px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 20px 0;
+  font-size: 1em;
+}
+
+.add-shirt-button:hover {
+  background-color: #5a6268;
+}
+
+.order-summary {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.order-summary h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.summary-items {
+  margin-bottom: 10px;
+}
+
+.summary-item {
+  padding: 5px 0;
+  color: #495057;
+}
+
+.summary-total {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #dee2e6;
+  font-weight: bold;
+  color: #333;
 }
 </style>
