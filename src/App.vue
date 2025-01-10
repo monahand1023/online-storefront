@@ -1,3 +1,7 @@
+import { googleSheetsLogger } from './services/googleSheetsLogger';
+import { loadStripe } from '@stripe/stripe-js';
+
+
 <!-- src/App.vue -->
 <template>
   <div class="store-container">
@@ -34,8 +38,6 @@
 </template>
 
 <script>
-// Import at the top of the script section
-import { loadStripe } from '@stripe/stripe-js';
 
 export default {
   data() {
@@ -52,6 +54,14 @@ export default {
       this.isLoading = true;
       
       try {
+        // Log transaction initiation
+        await googleSheetsLogger.logTransaction({
+          amount: this.price * this.quantity,
+          quantity: this.quantity,
+          size: this.selectedSize,
+          status: 'initiated'
+        });
+        
         console.log('Starting checkout process...');
         
         const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -80,6 +90,14 @@ export default {
         const session = await response.json();
         console.log('Checkout session created:', session);
         
+        // Log successful checkout session creation
+        await googleSheetsLogger.logTransaction({
+          amount: this.price * this.quantity,
+          quantity: this.quantity,
+          size: this.selectedSize,
+          status: 'checkout_created'
+        });
+        
         // Redirect to Stripe Checkout
         const result = await stripe.redirectToCheckout({
           sessionId: session.id,
@@ -91,6 +109,15 @@ export default {
         }
       } catch (error) {
         console.error('Detailed error:', error);
+        
+        // Log failed transaction
+        await googleSheetsLogger.logTransaction({
+          amount: this.price * this.quantity,
+          quantity: this.quantity,
+          size: this.selectedSize,
+          status: 'failed'
+        });
+        
         alert(`Checkout error: ${error.message}`);
       } finally {
         this.isLoading = false;

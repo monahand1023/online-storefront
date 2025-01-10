@@ -1,17 +1,22 @@
-// netlify/functions/create-checkout.js
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import Stripe from 'stripe';
 
-exports.handler = async (event) => {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   try {
     const { quantity, size } = JSON.parse(event.body);
     
+    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      customer_email_collection: true, // This will collect the email during checkout
+      mode: 'payment',
       line_items: [
         {
           price_data: {
@@ -25,9 +30,9 @@ exports.handler = async (event) => {
           quantity: quantity,
         },
       ],
-      mode: 'payment',
-      success_url: 'http://localhost:8888/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'http://localhost:8888',
+      customer_email: undefined, // Let Stripe collect email during checkout
+      success_url: `${process.env.URL}/success`,
+      cancel_url: `${process.env.URL}`,
     });
 
     return {
@@ -35,6 +40,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ id: session.id }),
     };
   } catch (error) {
+    console.error('Stripe error:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),
