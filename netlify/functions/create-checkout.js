@@ -13,12 +13,13 @@ export const handler = async (event) => {
   try {
     const { quantity, size } = JSON.parse(event.body);
     
+    // Log the URL being used
+    console.log('Site URL:', process.env.URL);
+    const successUrl = `${process.env.URL}/success?session_id={CHECKOUT_SESSION_ID}`;
+    console.log('Success URL:', successUrl);
+    
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
-      metadata: {
-        size,
-        quantity: quantity.toString()
-      },
       payment_method_types: ['card'],
       mode: 'payment',
       line_items: [
@@ -34,14 +35,20 @@ export const handler = async (event) => {
           quantity: quantity,
         },
       ],
-      customer_email: undefined, // Let Stripe collect email during checkout
-      success_url: `${process.env.URL}/success`,
+      metadata: {
+        size,
+        quantity: quantity.toString()
+      },
+      success_url: successUrl,
       cancel_url: `${process.env.URL}`,
     });
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ id: session.id }),
+      body: JSON.stringify({ 
+        id: session.id,
+        success_url: successUrl // Include in response for debugging
+      }),
     };
   } catch (error) {
     console.error('Stripe error:', error);
