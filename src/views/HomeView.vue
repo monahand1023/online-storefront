@@ -8,7 +8,7 @@
       <h2>Limited Edition T-Shirt</h2>
       <p class="price">${{ price.toFixed(2) }}</p>
       
-      <form @submit.prevent="handleCheckout" class="order-form">
+      <form @submit.prevent="handleCheckout">
         <div class="product-options">
           <div class="size-selector">
             <label for="size">Size: <span class="required">*</span></label>
@@ -112,15 +112,6 @@
           {{ error }}
         </div>
 
-        <div v-if="validationErrors.length > 0" class="error-message">
-          <div>Please fill in all required fields:</div>
-          <ul>
-            <li v-for="(error, index) in validationErrors" :key="index">
-              {{ error }}
-            </li>
-          </ul>
-        </div>
-
         <div v-if="discountApplied" class="discount-message">
           40% discount applied!
         </div>
@@ -163,19 +154,6 @@ export default {
   computed: {
     discountApplied() {
       return this.promoCode.trim().toUpperCase() === 'JN-TSHIRT-DISCOUNT'
-    },
-    validationErrors() {
-      if (!this.showErrors) return [];
-      
-      const errors = [];
-      if (!this.selectedSize) errors.push('Please select a size');
-      if (!this.quantity) errors.push('Please select a quantity');
-      if (!this.studentGrade) errors.push('Please select student\'s grade');
-      if (!this.program) errors.push('Please select a program');
-      if (!this.pickupName.trim()) errors.push('Please enter pickup person\'s name');
-      if (!this.pickupDate) errors.push('Please select a pickup date');
-      
-      return errors;
     }
   },
   async created() {
@@ -202,7 +180,9 @@ export default {
     },
     async handleCheckout() {
       this.showErrors = true;
-      if (this.validationErrors.length > 0) {
+      
+      if (!this.selectedSize || !this.quantity || !this.studentGrade || 
+          !this.program || !this.pickupName.trim() || !this.pickupDate) {
         this.error = 'Please fill in all required fields';
         return;
       }
@@ -255,11 +235,90 @@ export default {
 </script>
 
 <style scoped>
-/* Previous styles remain the same */
+.store-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.product-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 30px;
+  margin-top: 20px;
+}
+
+.product-image {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  margin-bottom: 20px;
+}
+
+.price {
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+  margin: 20px 0;
+}
+
+.product-options {
+  display: flex;
+  gap: 40px;
+  margin: 30px 0;
+}
+
+.size-selector,
+.quantity-selector {
+  flex: 1;
+}
+
+.student-info {
+  margin: 30px 0;
+  padding: 30px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 500;
+  font-size: 1.1em;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+  background-color: #fff;
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  padding-right: 30px;
+}
 
 .required {
   color: #dc3545;
-  margin-left: 2px;
+  margin-left: 4px;
+  font-size: 0.9em;
 }
 
 .error-input {
@@ -267,21 +326,42 @@ export default {
   background-color: #fff8f8;
 }
 
-.order-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.error-message ul {
-  margin: 10px 0 0 20px;
-  padding: 0;
-}
-
-.error-message li {
+.error-message {
   color: #dc3545;
-  margin-top: 5px;
+  padding: 15px;
+  margin: 20px 0;
+  background: #f8d7da;
+  border-radius: 4px;
+  border: 1px solid #dc3545;
 }
 
-/* Rest of your existing styles */
+.discount-message {
+  color: #4CAF50;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #4CAF50;
+  border-radius: 4px;
+  background-color: #e8f5e9;
+}
+
+.checkout-button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 16px;
+  margin-top: 20px;
+}
+
+.checkout-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.checkout-button:not(:disabled):hover {
+  background-color: #45a049;
+}
 </style>
