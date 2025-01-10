@@ -34,6 +34,26 @@
               <span class="value">${{ formatAmount(sessionData?.amount_total) }}</span>
             </div>
             <div class="info-row">
+              <span class="label">Student Grade:</span>
+              <span class="value">{{ formatGrade(sessionData?.metadata?.studentGrade) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Program:</span>
+              <span class="value">{{ sessionData?.metadata?.program || 'Not specified' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Pickup Person:</span>
+              <span class="value">{{ sessionData?.metadata?.pickupName || 'Not specified' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Pickup Date:</span>
+              <span class="value">{{ sessionData?.metadata?.pickupDate || 'Not specified' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Discount Applied:</span>
+              <span class="value">{{ sessionData?.metadata?.discountApplied === 'true' ? 'Yes (40% off)' : 'No' }}</span>
+            </div>
+            <div class="info-row">
               <span class="label">Email:</span>
               <span class="value">{{ sessionData?.customer_details?.email || 'Not provided' }}</span>
             </div>
@@ -48,14 +68,14 @@
           <h2>What's Next?</h2>
           <ul>
             <li>You will receive an order confirmation email shortly</li>
-            <li>Expected shipping time: 5-7 business days</li>
-            <li>Your order will be carefully packaged and shipped to the provided address</li>
-            <li>Track your order status in the confirmation email</li>
+            <li>Your t-shirt will be available for pickup on your selected date: {{ sessionData?.metadata?.pickupDate || 'specified date' }}</li>
+            <li>Please bring ID for verification during pickup</li>
+            <li>The pickup person must match the name provided: {{ sessionData?.metadata?.pickupName || 'specified name' }}</li>
           </ul>
         </div>
 
         <div class="contact-info">
-          <p>Questions about your order? Contact us at support@japannight.com</p>
+          <p>Questions about your order? Contact us at committee@example.com</p>
         </div>
 
         <div v-if="loggingError" class="error-message logging-error">
@@ -106,13 +126,16 @@ export default {
             amount: this.sessionData.amount_total / 100, // Convert cents to dollars
             quantity: parseInt(this.sessionData.metadata?.quantity || '1'),
             size: this.sessionData.metadata?.size || 'Unknown',
-            status: this.sessionData.payment_status
+            status: this.sessionData.payment_status,
+            studentGrade: this.sessionData.metadata?.studentGrade,
+            program: this.sessionData.metadata?.program,
+            pickupName: this.sessionData.metadata?.pickupName,
+            pickupDate: this.sessionData.metadata?.pickupDate,
+            discountApplied: this.sessionData.metadata?.discountApplied === 'true'
           })
-          console.log('Successfully logged transaction to Google Sheets')
         } catch (loggingError) {
           console.error('Failed to log transaction to Google Sheets:', loggingError)
           this.loggingError = 'There was an issue recording your order details, but your order has been processed successfully.'
-          // We don't throw here because we still want to show the success page
         }
       }
     } catch (error) {
@@ -129,6 +152,10 @@ export default {
     formatStatus(status) {
       if (!status) return 'Unknown'
       return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+    },
+    formatGrade(grade) {
+      if (!grade) return 'Not specified'
+      return grade === 'K' ? 'Kindergarten' : `Grade ${grade}`
     }
   }
 }
@@ -184,23 +211,12 @@ export default {
   margin-top: 20px;
 }
 
-h1 {
-  color: #2c3e50;
-  margin-bottom: 30px;
-}
-
 .order-info {
   margin: 30px 0;
   padding: 25px;
   background: #f8f9fa;
   border-radius: 8px;
   text-align: left;
-}
-
-h2 {
-  color: #2c3e50;
-  margin-bottom: 20px;
-  font-size: 1.5em;
 }
 
 .info-grid {
@@ -211,7 +227,7 @@ h2 {
 
 .info-row {
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: 140px 1fr;
   align-items: center;
   padding: 8px 0;
   border-bottom: 1px solid #eee;

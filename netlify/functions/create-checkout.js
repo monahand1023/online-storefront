@@ -11,14 +11,21 @@ export const handler = async (event) => {
   }
 
   try {
-    const { quantity, size } = JSON.parse(event.body);
+    const { 
+      quantity, 
+      size, 
+      studentGrade,
+      program,
+      pickupName,
+      pickupDate,
+      discountApplied 
+    } = JSON.parse(event.body);
     
-    // Log the URL being used
-    console.log('Site URL:', process.env.URL);
+    const baseAmount = 2500; // $25.00 in cents
+    const finalAmount = discountApplied ? Math.round(baseAmount * 0.6) : baseAmount;
+
     const successUrl = `${process.env.URL}/success?session_id={CHECKOUT_SESSION_ID}`;
-    console.log('Success URL:', successUrl);
     
-    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
@@ -30,14 +37,19 @@ export const handler = async (event) => {
               name: 'Event T-Shirt',
               description: `Size: ${size}`,
             },
-            unit_amount: 2500, // $25.00 in cents
+            unit_amount: finalAmount,
           },
           quantity: quantity,
         },
       ],
       metadata: {
         size,
-        quantity: quantity.toString()
+        quantity: quantity.toString(),
+        studentGrade,
+        program,
+        pickupName,
+        pickupDate,
+        discountApplied: discountApplied ? 'true' : 'false'
       },
       success_url: successUrl,
       cancel_url: `${process.env.URL}`,
@@ -47,7 +59,7 @@ export const handler = async (event) => {
       statusCode: 200,
       body: JSON.stringify({ 
         id: session.id,
-        success_url: successUrl // Include in response for debugging
+        success_url: successUrl
       }),
     };
   } catch (error) {

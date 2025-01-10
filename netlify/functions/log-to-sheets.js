@@ -10,8 +10,18 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const { timestamp, amount, quantity, size, status } = JSON.parse(event.body);
-    console.log('Received data:', { timestamp, amount, quantity, size, status });
+    const { 
+      timestamp, 
+      amount, 
+      quantity, 
+      size, 
+      status,
+      studentGrade,
+      program,
+      pickupName,
+      pickupDate,
+      discountApplied 
+    } = JSON.parse(event.body);
 
     // Validate required fields
     if (!timestamp || !amount || !quantity || !size || !status) {
@@ -21,10 +31,8 @@ exports.handler = async function(event, context) {
       };
     }
 
-    // Parse the service account credentials
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS);
     
-    // Create JWT client
     const auth = new google.auth.GoogleAuth({
       credentials,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
@@ -32,25 +40,28 @@ exports.handler = async function(event, context) {
 
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // Prepare the values to append
-    const values = [[timestamp, amount, quantity, size, status]];
+    // Prepare the values to append (expanded with new fields)
+    const values = [[
+      timestamp, 
+      amount, 
+      quantity, 
+      size, 
+      status,
+      studentGrade || 'N/A',
+      program || 'N/A',
+      pickupName || 'N/A',
+      pickupDate || 'N/A',
+      discountApplied ? 'Yes' : 'No'
+    ]];
 
-    console.log('Attempting to append to spreadsheet:', {
-      spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
-      values
-    });
-
-    // Append the values to the spreadsheet
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
-      range: 'A:E',
+      range: 'A:J', // Updated range to include new columns
       valueInputOption: 'RAW',
       requestBody: {
         values: values
       }
     });
-
-    console.log('Sheets API Response:', response.data);
 
     return {
       statusCode: 200,

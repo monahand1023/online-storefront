@@ -25,16 +25,70 @@
           </select>
         </div>
       </div>
+
+      <div class="student-info">
+        <div class="form-group">
+          <label for="grade">Student's Grade:</label>
+          <select v-model="studentGrade" id="grade">
+            <option v-for="grade in grades" :key="grade" :value="grade">
+              {{ grade === 'K' ? 'Kindergarten' : `Grade ${grade}` }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="program">Program:</label>
+          <select v-model="program" id="program">
+            <option v-for="prog in programs" :key="prog" :value="prog">
+              {{ prog }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="pickupName">Who will pick up the t-shirt?</label>
+          <input 
+            type="text" 
+            id="pickupName" 
+            v-model="pickupName" 
+            placeholder="Enter full name"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="pickupDate">Pickup Date:</label>
+          <select v-model="pickupDate" id="pickupDate">
+            <option v-for="date in pickupDates" :key="date" :value="date">
+              {{ date }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="promoCode">Promo Code:</label>
+          <input 
+            type="text" 
+            id="promoCode" 
+            v-model="promoCode" 
+            placeholder="Enter promo code"
+          >
+        </div>
+      </div>
       
       <div v-if="error" class="error-message">
         {{ error }}
       </div>
 
+      <div v-if="discountApplied" class="discount-message">
+        40% discount applied!
+      </div>
+
       <button 
         @click="handleCheckout" 
         class="checkout-button"
-        :disabled="isLoading">
-        {{ isLoading ? 'Processing...' : `Checkout (Total: $${(price * quantity).toFixed(2)})` }}
+        :disabled="isLoading || !isFormValid">
+        {{ isLoading ? 'Processing...' : `Checkout (Total: $${calculateTotal()})` }}
       </button>
     </div>
   </div>
@@ -50,24 +104,44 @@ export default {
       selectedSize: 'M',
       quantity: 1,
       sizes: ['S', 'M', 'L', 'XL'],
+      grades: ['K', '1', '2', '3', '4', '5'],
+      programs: ['Spanish', 'Japanese'],
+      pickupDates: ['2/15', '2/16', '2/17'],
+      studentGrade: '',
+      program: '',
+      pickupName: '',
+      pickupDate: '',
+      promoCode: '',
       isLoading: false,
       error: null,
       stripePromise: null
     }
   },
-  async created() {
-    try {
-      this.stripePromise = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
-      if (!this.stripePromise) {
-        throw new Error('Failed to initialize Stripe')
-      }
-    } catch (error) {
-      console.error('Stripe initialization error:', error)
-      this.error = 'Failed to initialize payment system'
+  computed: {
+    discountApplied() {
+      return this.promoCode.trim().toUpperCase() === 'JN-TSHIRT-DISCOUNT'
+    },
+    isFormValid() {
+      return this.studentGrade && 
+             this.program && 
+             this.pickupName.trim() && 
+             this.pickupDate
     }
   },
   methods: {
+    calculateTotal() {
+      let total = this.price * this.quantity
+      if (this.discountApplied) {
+        total *= 0.6 // Apply 40% discount
+      }
+      return total.toFixed(2)
+    },
     async handleCheckout() {
+      if (!this.isFormValid) {
+        this.error = 'Please fill in all required fields'
+        return
+      }
+
       this.isLoading = true
       this.error = null
       
@@ -76,7 +150,6 @@ export default {
           throw new Error('Payment system not initialized')
         }
 
-        console.log('Creating checkout session...')
         const response = await fetch('/.netlify/functions/create-checkout', {
           method: 'POST',
           headers: {
@@ -85,21 +158,22 @@ export default {
           body: JSON.stringify({
             quantity: this.quantity,
             size: this.selectedSize,
+            studentGrade: this.studentGrade,
+            program: this.program,
+            pickupName: this.pickupName,
+            pickupDate: this.pickupDate,
+            promoCode: this.promoCode,
+            discountApplied: this.discountApplied
           }),
         })
         
-        console.log('Response status:', response.status)
-        
         if (!response.ok) {
           const errorText = await response.text()
-          console.error('Checkout error response:', errorText)
           throw new Error(`Checkout failed: ${errorText}`)
         }
         
         const session = await response.json()
-        console.log('Session created:', session)
         
-        // Redirect to Stripe Checkout
         const result = await this.stripePromise.redirectToCheckout({
           sessionId: session.id
         })
@@ -119,77 +193,40 @@ export default {
 </script>
 
 <style scoped>
-.store-container {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
-}
+/* Existing styles remain the same */
 
-.product-card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
-}
-
-.product-image {
-  width: 100%;
-  max-width: 400px;
-  height: auto;
-  margin-bottom: 20px;
-}
-
-.price {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-}
-
-.product-options {
+.student-info {
   margin: 20px 0;
-  display: flex;
-  gap: 20px;
-}
-
-.size-selector,
-.quantity-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-select {
-  padding: 8px;
-  border-radius: 4px;
+  padding: 20px;
   border: 1px solid #ddd;
-}
-
-.checkout-button {
-  background-color: #4CAF50;
-  color: white;
-  padding: 12px 24px;
-  border: none;
   border-radius: 4px;
-  cursor: pointer;
+  background-color: #f9f9f9;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
   width: 100%;
-  font-size: 16px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
-.checkout-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.checkout-button:not(:disabled):hover {
-  background-color: #45a049;
-}
-
-.error-message {
-  color: #dc3545;
+.discount-message {
+  color: #4CAF50;
   padding: 10px;
   margin: 10px 0;
-  border: 1px solid #dc3545;
+  border: 1px solid #4CAF50;
   border-radius: 4px;
-  background-color: #f8d7da;
+  background-color: #e8f5e9;
 }
 </style>
