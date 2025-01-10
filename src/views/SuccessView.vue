@@ -58,6 +58,10 @@
           <p>Questions about your order? Contact us at support@japannight.com</p>
         </div>
 
+        <div v-if="loggingError" class="error-message logging-error">
+          Note: There was an issue recording your order details, but your order has been processed successfully.
+        </div>
+
         <router-link to="/" class="back-button">
           Return to Store
         </router-link>
@@ -67,12 +71,15 @@
 </template>
 
 <script>
+import { googleSheetsLogger } from '@/services/googleSheetsLogger'
+
 export default {
   data() {
     return {
       sessionData: null,
       isLoading: true,
-      error: null
+      error: null,
+      loggingError: null
     }
   },
   async created() {
@@ -89,7 +96,25 @@ export default {
       if (!response.ok) {
         throw new Error('Failed to load order details')
       }
+      
       this.sessionData = await response.json()
+      
+      // Log successful transactions to Google Sheets
+      if (this.sessionData.payment_status === 'paid') {
+        try {
+          await googleSheetsLogger.logTransaction({
+            amount: this.sessionData.amount_total / 100, // Convert cents to dollars
+            quantity: parseInt(this.sessionData.metadata?.quantity || '1'),
+            size: this.sessionData.metadata?.size || 'Unknown',
+            status: this.sessionData.payment_status
+          })
+          console.log('Successfully logged transaction to Google Sheets')
+        } catch (loggingError) {
+          console.error('Failed to log transaction to Google Sheets:', loggingError)
+          this.loggingError = 'There was an issue recording your order details, but your order has been processed successfully.'
+          // We don't throw here because we still want to show the success page
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch session details:', error)
       this.error = 'Unable to load order details. Please check your confirmation email.'
@@ -150,6 +175,13 @@ export default {
   background: #f8d7da;
   border-radius: 4px;
   border: 1px solid #dc3545;
+}
+
+.error-message.logging-error {
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+  color: #856404;
+  margin-top: 20px;
 }
 
 h1 {
