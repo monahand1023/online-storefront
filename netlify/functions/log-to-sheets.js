@@ -12,10 +12,13 @@ exports.handler = async function(event, context) {
   try {
     const { 
       timestamp, 
+      orderId,
       amount, 
       quantity, 
       size, 
       status,
+      email,
+      customerName,
       studentGrade,
       program,
       pickupName,
@@ -43,10 +46,13 @@ exports.handler = async function(event, context) {
     // Prepare the values to append (expanded with new fields)
     const values = [[
       timestamp, 
+      orderId,
       amount, 
       quantity, 
       size, 
       status,
+      email,
+      customerName || 'N/A',
       studentGrade || 'N/A',
       program || 'N/A',
       pickupName || 'N/A',
@@ -56,7 +62,7 @@ exports.handler = async function(event, context) {
 
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
-      range: 'A:J', // Updated range to include new columns
+      range: 'A:M', // Updated range to include new columns
       valueInputOption: 'RAW',
       requestBody: {
         values: values

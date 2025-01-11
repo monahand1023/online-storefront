@@ -11,6 +11,9 @@ interface Transaction {
   pickupName?: string;
   pickupDate?: string;
   discountApplied?: boolean;
+  email?: string;
+  orderId?: string;
+  customerName?: string;
 }
 
 class GoogleSheetsLogger {
@@ -22,8 +25,8 @@ class GoogleSheetsLogger {
 
   private formatDate(date: Date): string {
     return date.toLocaleString('en-GB', {
-      day: '2-digit',
       month: '2-digit',
+      day: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
@@ -35,16 +38,20 @@ class GoogleSheetsLogger {
     try {
       console.log('Attempting to log transaction...');
       const timestamp = this.formatDate(new Date());
+      const orderId = `JN-${Date.now().toString(36).toUpperCase()}`; // Generate a unique order ID
       
       // Create separate log entries for each size in the order
       const orders = orderSummary.map(order => {
         const [quantity, size] = order.split('x ').map(part => part.trim());
         return {
           timestamp,
+          orderId,
           amount: transaction.amount / orderSummary.length, // Split amount evenly across sizes
           quantity: parseInt(quantity),
           size,
           status: transaction.status,
+          email: transaction.email || 'Not provided',
+          customerName: transaction.customerName || 'Not provided',
           studentGrade: transaction.studentGrade,
           program: transaction.program,
           pickupName: transaction.pickupName,

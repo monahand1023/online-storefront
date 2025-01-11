@@ -162,23 +162,26 @@ export default {
       }
       
       // Log successful transactions to Google Sheets
-      if (this.sessionData.payment_status === 'paid') {
-        try {
-          const orderSummary = this.sessionData.metadata.ordersSummary.split(', ')
-          await googleSheetsLogger.logTransaction({
-            amount: this.sessionData.amount_total / 100,
-            status: this.sessionData.payment_status,
-            studentGrade: this.sessionData.metadata?.studentGrade,
-            program: this.sessionData.metadata?.program,
-            pickupName: this.sessionData.metadata?.pickupName,
-            pickupDate: this.sessionData.metadata?.pickupDate,
-            discountApplied: this.sessionData.metadata?.discountApplied === 'true'
-          }, orderSummary)
-        } catch (loggingError) {
-          console.error('Failed to log transaction to Google Sheets:', loggingError)
-          this.loggingError = 'There was an issue recording your order details, but your order has been processed successfully.'
-        }
-      }
+// In SuccessView.vue, update the logging section:
+if (this.sessionData.payment_status === 'paid') {
+  try {
+    const orderSummary = this.sessionData.metadata.ordersSummary.split(', ');
+    await googleSheetsLogger.logTransaction({
+      amount: this.sessionData.amount_total / 100,
+      status: this.sessionData.payment_status,
+      email: this.sessionData.customer_details?.email,
+      customerName: `${this.sessionData.customer_details?.name || 'Not provided'}`,
+      studentGrade: this.sessionData.metadata?.studentGrade,
+      program: this.sessionData.metadata?.program,
+      pickupName: this.sessionData.metadata?.pickupName,
+      pickupDate: this.sessionData.metadata?.pickupDate,
+      discountApplied: this.sessionData.metadata?.discountApplied === 'true'
+    }, orderSummary);
+  } catch (loggingError) {
+    console.error('Failed to log transaction to Google Sheets:', loggingError);
+    this.loggingError = 'There was an issue recording your order details, but your order has been processed successfully.';
+  }
+}
     } catch (error) {
       console.error('Failed to fetch session details:', error)
       this.error = 'Unable to load order details. Please check your confirmation email.'
