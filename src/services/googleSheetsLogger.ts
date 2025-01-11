@@ -6,6 +6,11 @@ interface Transaction {
   quantity: number;
   size: string;
   status: string;
+  studentGrade?: string;
+  program?: string;
+  pickupName?: string;
+  pickupDate?: string;
+  discountApplied?: boolean;
 }
 
 class GoogleSheetsLogger {
@@ -15,24 +20,48 @@ class GoogleSheetsLogger {
     this.SHEETS_API_ENDPOINT = '/.netlify/functions/log-to-sheets';
   }
 
-  async logTransaction(transaction: Omit<Transaction, 'timestamp'>): Promise<void> {
+  private formatDate(date: Date): string {
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).replace(',', '');
+  }
+
+  async logTransaction(transaction: Omit<Transaction, 'timestamp'>, orderSummary: string[]): Promise<void> {
     try {
       console.log('Attempting to log transaction...');
+      const timestamp = this.formatDate(new Date());
       
-      const response = await fetch(this.SHEETS_API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...transaction,
-          timestamp: new Date().toISOString()
-        }),
+      // Create separate log entries for each size in the order
+      const orders = orderSummary.map(order => {
+        const [quantity, size] = order.split('x ').map(part => part.trim());
+        return {
+          timestamp,
+          amount: transaction.amount / orderSummary.length, // Split amount evenly across sizes
+          quantity: parseInt(quantity),
+          size,
+          status: transaction.status,
+          studentGrade: transaction.studentGrade,
+          program: transaction.program,
+          pickupName: transaction.pickupName,
+          pickupDate: transaction.pickupDate,
+          discountApplied: transaction.discountApplied
+        };
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Failed to log transaction: ${errorData.error || response.statusText}`);
+      // Log each size as a separate row
+      for (const order of orders) {
+        await fetch(this.SHEETS_API_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(order),
+        });
       }
 
       console.log('Transaction successfully logged to Google Sheets');

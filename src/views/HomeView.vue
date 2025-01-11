@@ -61,7 +61,7 @@
           class="add-shirt-button"
           @click="addShirtOrder"
         >
-          + Add Another Shirt
+          + Add Another Shirt Size To Order
         </button>
 
         <!-- Order summary -->
