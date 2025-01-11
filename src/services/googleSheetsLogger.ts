@@ -38,16 +38,27 @@ class GoogleSheetsLogger {
     try {
       console.log('Attempting to log transaction...');
       const timestamp = this.formatDate(new Date());
-      const orderId = `JN-${Date.now().toString(36).toUpperCase()}`; // Generate a unique order ID
+      const orderId = `JN-${Date.now().toString(36).toUpperCase()}`;
       
-      // Create separate log entries for each size in the order
+      // Calculate total quantity and price per shirt
+      const totalQuantity = orderSummary.reduce((sum, order) => {
+        const [quantity] = order.split('x ').map(part => parseInt(part.trim()));
+        return sum + quantity;
+      }, 0);
+      
+      const pricePerShirt = transaction.amount / totalQuantity;
+      
+      // Create separate log entries for each size with proportional amounts
       const orders = orderSummary.map(order => {
         const [quantity, size] = order.split('x ').map(part => part.trim());
+        const itemQuantity = parseInt(quantity);
+        const itemAmount = pricePerShirt * itemQuantity; // Amount for this size based on quantity
+
         return {
           timestamp,
           orderId,
-          amount: transaction.amount / orderSummary.length, // Split amount evenly across sizes
-          quantity: parseInt(quantity),
+          amount: itemAmount,
+          quantity: itemQuantity,
           size,
           status: transaction.status,
           email: transaction.email || 'Not provided',
