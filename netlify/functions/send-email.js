@@ -29,7 +29,10 @@ export const handler = async (event) => {
       html: `
         <h1>Thank You for Your Order!</h1>
         <h2>Order Details:</h2>
-        <p>Order Summary: ${orderDetails.ordersSummary}</p>
+        <h3>Order Items:</h3>
+        <ul>
+          ${orderDetails.orderItems.map(item => `<li>${item}</li>`).join('')}
+        </ul>
         <p>Total Amount: $${(orderDetails.amount_total / 100).toFixed(2)}</p>
         <p>Pickup Name: ${orderDetails.pickupName}</p>
         <p>Pickup Date: ${orderDetails.pickupDate}</p>

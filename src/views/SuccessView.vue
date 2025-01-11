@@ -21,13 +21,14 @@
               <span class="label">Product:</span>
               <span class="value">Event T-Shirt</span>
             </div>
-            <div class="info-row">
-              <span class="label">Size:</span>
-              <span class="value">{{ sessionData?.metadata?.size || 'Not specified' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Quantity:</span>
-              <span class="value">{{ sessionData?.metadata?.quantity || '1' }}</span>
+            <!-- Replace single size/quantity with multiple orders display -->
+            <div class="info-row items-section">
+              <span class="label">Orders:</span>
+              <div class="value items-list">
+                <div v-for="(item, index) in orderItems" :key="index" class="order-item">
+                  {{ item }}
+                </div>
+              </div>
             </div>
             <div class="info-row">
               <span class="label">Amount:</span>
@@ -68,7 +69,7 @@
           <h2>What's Next?</h2>
           <ul>
             <li>You will receive an order confirmation email shortly</li>
-            <li>Your t-shirt will be available for pickup on your selected date: {{ sessionData?.metadata?.pickupDate || 'specified date' }}</li>
+            <li>Your t-shirts will be available for pickup on your selected date: {{ sessionData?.metadata?.pickupDate || 'specified date' }}</li>
             <li>Please bring ID for verification during pickup</li>
             <li>The pickup person must match the name provided: {{ sessionData?.metadata?.pickupName || 'specified name' }}</li>
           </ul>
@@ -80,6 +81,10 @@
 
         <div v-if="loggingError" class="error-message logging-error">
           Note: There was an issue recording your order details, but your order has been processed successfully.
+        </div>
+
+        <div v-if="emailError" class="error-message email-error">
+          Note: There was an issue sending your confirmation email, but your order has been processed successfully.
         </div>
 
         <router-link to="/" class="back-button">
@@ -99,7 +104,9 @@ export default {
       sessionData: null,
       isLoading: true,
       error: null,
-      loggingError: null
+      loggingError: null,
+      emailError: null,
+      orderItems: []
     }
   },
   async created() {
@@ -119,26 +126,59 @@ export default {
       
       this.sessionData = await response.json()
       
-      // Log successful transactions to Google Sheets
-// In SuccessView.vue, update the logging section:
+      // Parse the order summary into readable format
+      if (this.sessionData.metadata?.ordersSummary) {
+        this.orderItems = this.sessionData.metadata.ordersSummary.split(', ').map(order => {
+          const [quantity, size] = order.split('x ').map(part => part.trim())
+          return `${quantity} × Size ${size}`
+        })
+      }
 
-if (this.sessionData.payment_status === 'paid') {
-  try {
-    const orderSummary = this.sessionData.metadata.ordersSummary.split(', ');
-    await googleSheetsLogger.logTransaction({
-      amount: this.sessionData.amount_total / 100,
-      status: this.sessionData.payment_status,
-      studentGrade: this.sessionData.metadata?.studentGrade,
-      program: this.sessionData.metadata?.program,
-      pickupName: this.sessionData.metadata?.pickupName,
-      pickupDate: this.sessionData.metadata?.pickupDate,
-      discountApplied: this.sessionData.metadata?.discountApplied === 'true'
-    }, orderSummary);
-  } catch (loggingError) {
-    console.error('Failed to log transaction to Google Sheets:', loggingError);
-    this.loggingError = 'There was an issue recording your order details, but your order has been processed successfully.';
-  }
-}
+      // Send confirmation email
+      if (this.sessionData.customer_details?.email) {
+        try {
+          const emailResponse = await fetch('/.netlify/functions/send-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: this.sessionData.customer_details.email,
+              orderDetails: {
+                ...this.sessionData.metadata,
+                amount_total: this.sessionData.amount_total,
+                orderItems: this.orderItems
+              }
+            }),
+          })
+
+          if (!emailResponse.ok) {
+            throw new Error('Failed to send confirmation email')
+          }
+        } catch (error) {
+          console.error('Failed to send email:', error)
+          this.emailError = 'There was an issue sending your confirmation email, but your order has been processed successfully.'
+        }
+      }
+      
+      // Log successful transactions to Google Sheets
+      if (this.sessionData.payment_status === 'paid') {
+        try {
+          const orderSummary = this.sessionData.metadata.ordersSummary.split(', ')
+          await googleSheetsLogger.logTransaction({
+            amount: this.sessionData.amount_total / 100,
+            status: this.sessionData.payment_status,
+            studentGrade: this.sessionData.metadata?.studentGrade,
+            program: this.sessionData.metadata?.program,
+            pickupName: this.sessionData.metadata?.pickupName,
+            pickupDate: this.sessionData.metadata?.pickupDate,
+            discountApplied: this.sessionData.metadata?.discountApplied === 'true'
+          }, orderSummary)
+        } catch (loggingError) {
+          console.error('Failed to log transaction to Google Sheets:', loggingError)
+          this.loggingError = 'There was an issue recording your order details, but your order has been processed successfully.'
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch session details:', error)
       this.error = 'Unable to load order details. Please check your confirmation email.'
@@ -163,6 +203,7 @@ if (this.sessionData.payment_status === 'paid') {
 </script>
 
 <style scoped>
+/* Keep all existing styles */
 .success-container {
   max-width: 600px;
   margin: 40px auto;
@@ -298,5 +339,30 @@ if (this.sessionData.payment_status === 'paid') {
 
 .back-button:hover {
   background: #45a049;
+}
+
+/* Add new styles for multiple orders display */
+.items-section {
+  align-items: flex-start !important;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-item {
+  padding: 4px 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.email-error {
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+  color: #856404;
+  margin-top: 20px;
 }
 </style>
