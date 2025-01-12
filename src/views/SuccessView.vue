@@ -6,7 +6,7 @@
       <h1>Thank You for Your Order!</h1>
       
       <div v-if="isLoading" class="loading">
-        Loading order details...
+        Loading order details for your confirmation. One moment please...
       </div>
 
       <div v-else-if="error" class="error-message">
