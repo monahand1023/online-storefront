@@ -10,7 +10,31 @@ export const handler = async (event) => {
   }
 
   try {
+    console.log('Starting email send process...');
+    
+    if (!event.body) {
+      console.error('No request body provided');
+      throw new Error('No request body provided');
+    }
+    
     const { email, orderDetails } = JSON.parse(event.body);
+    
+    if (!email) {
+      console.error('No email address provided');
+      throw new Error('No email address provided');
+    }
+    
+    if (!orderDetails) {
+      console.error('No order details provided');
+      throw new Error('No order details provided');
+    }
+    
+    console.log('Request data received:', { 
+      email, 
+      hasOrderItems: !!orderDetails.orderItems,
+      pickupDate: orderDetails.pickupDate,
+      totalAmount: orderDetails.amount_total
+    });
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -20,6 +44,13 @@ export const handler = async (event) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
+    });
+
+    console.log('SMTP Configuration:', {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      user: process.env.SMTP_USER,
+      hasPassword: !!process.env.SMTP_PASSWORD
     });
 
     const mailOptions = {
@@ -51,17 +82,27 @@ export const handler = async (event) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    console.log('Attempting to send email...');
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', {
+      messageId: result.messageId,
+      response: result.response
+    });
 
     return {
       statusCode: 200,
       body: JSON.stringify({ message: 'Email sent successfully' }),
     };
   } catch (error) {
-    console.error('Email error:', error);
+    console.error('Email error:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      stack: error.stack
+    });
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to send email' }),
+      body: JSON.stringify({ error: 'Failed to send email', details: error.message }),
     };
   }
 };
