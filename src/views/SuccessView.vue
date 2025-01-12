@@ -21,7 +21,6 @@
               <span class="label">Product:</span>
               <span class="value">Event T-Shirt</span>
             </div>
-            <!-- Replace single size/quantity with multiple orders display -->
             <div class="info-row items-section">
               <span class="label">Orders:</span>
               <div class="value items-list">

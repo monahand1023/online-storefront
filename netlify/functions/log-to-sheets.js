@@ -62,7 +62,7 @@ exports.handler = async function(event, context) {
 
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
-      range: 'A:M', // Updated range to include new columns
+      range: 'A:M',
       valueInputOption: 'RAW',
       requestBody: {
         values: values
