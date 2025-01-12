@@ -1,7 +1,7 @@
 # Event T-Shirt Store Documentation
 
 ## Overview
-This is a Vue.js-based e-commerce application designed for selling Event T-shirts. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
+This is a Vue.js-based e-commerce application designed for selling t-shirts. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
 
 ## Tech Stack
 - Frontend: Vue 3 with TypeScript
@@ -143,7 +143,6 @@ VITE_DISCOUNT_CODE=         # Discount code for 40% off
 
 ### Pickup Dates
 - Configurable pickup dates in `HomeView.vue`
-- Currently set to: ['2/15', '2/16', '2/17']
 
 ## Data Flow
 
