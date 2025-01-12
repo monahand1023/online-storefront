@@ -27,11 +27,11 @@ export const handler = async (event) => {
     
     // Create line items for each shirt order
     const lineItems = orders.map(order => ({
-      price_data: {
+     price_data: {
         currency: 'usd',
         product_data: {
           name: 'Event T-Shirt',
-          description: `Size: ${order.size}`,
+          description: `Size: ${order.size}${discountApplied ? ' (40% Off Applied)' : ''}`,
         },
         unit_amount: finalAmount,
       },

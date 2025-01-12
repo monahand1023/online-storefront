@@ -194,8 +194,9 @@ export default {
     }
   },
   computed: {
-    discountApplied() {
-      return this.promoCode.trim().toUpperCase() === 'JN-TSHIRT-DISCOUNT'
+     discountApplied() {
+      const validCode = import.meta.env.VITE_DISCOUNT_CODE || '';
+      return this.promoCode.trim().toUpperCase() === validCode.toUpperCase();
     },
     totalQuantity() {
       return this.shirtOrders.reduce((sum, order) => sum + (parseInt(order.quantity) || 0), 0)

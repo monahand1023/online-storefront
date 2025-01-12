@@ -23,7 +23,7 @@ export const handler = async (event) => {
     });
 
     const mailOptions = {
-      from: 'committee@example.com',
+      from: 'orders@example.com',
       to: email,
       subject: 'Event T-Shirt Order Confirmation',
       html: `
@@ -46,7 +46,7 @@ export const handler = async (event) => {
           <li>The pickup person must match the name provided: ${orderDetails.pickupName}</li>
         </ul>
         
-        <p>If you have any questions, please contact us at committee@example.com</p>
+        <p>If you have any questions, please contact us at orders@example.com</p>
       `
     };
 

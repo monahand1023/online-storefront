@@ -30,9 +30,19 @@
                 </div>
               </div>
             </div>
-            <div class="info-row">
+             <div class="info-row">
               <span class="label">Amount:</span>
-              <span class="value">${{ formatAmount(sessionData?.amount_total) }}</span>
+              <span class="value">
+                <template v-if="sessionData?.metadata?.discountApplied === 'true'">
+                  <span class="original-price">${{ formatAmount(sessionData?.amount_total / 0.6) }}</span>
+                  <span class="final-price">${{ formatAmount(sessionData?.amount_total) }}</span>
+                  <span class="discount-tag">40% Off</span>
+                </template>
+                <template v-else>
+                  ${{ formatAmount(sessionData?.amount_total) }}
+                </template>
+              </span>
+            </div>
             </div>
             <div class="info-row">
               <span class="label">Student Grade:</span>
@@ -367,5 +377,25 @@ if (this.sessionData.payment_status === 'paid') {
   border-color: #ffeeba;
   color: #856404;
   margin-top: 20px;
+}
+
+.original-price {
+  text-decoration: line-through;
+  color: #666;
+  margin-right: 8px;
+}
+
+.final-price {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.discount-tag {
+  background: #4CAF50;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  margin-left: 8px;
 }
 </style>
