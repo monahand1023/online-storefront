@@ -25,6 +25,7 @@ export const handler = async (event) => {
     const mailOptions = {
       from: 'orders@example.com',
       to: email,
+      cc: 'orders@example.com',
       subject: 'Event T-Shirt Order Confirmation',
       html: `
         <h1>Thank You for Your Order!</h1>

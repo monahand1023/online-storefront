@@ -77,7 +77,7 @@
         <div class="next-steps">
           <h2>What's Next?</h2>
           <ul>
-            <li>You will receive an order confirmation email shortly</li>
+            <li>You will receive an order confirmation email shortly. Please check your junk folder if you cannot find it.</li>
             <li>Your t-shirts will be available for pickup on your selected date: {{ sessionData?.metadata?.pickupDate || 'specified date' }}</li>
             <li>Please bring ID for verification during pickup</li>
             <li>The pickup person must match the name provided: {{ sessionData?.metadata?.pickupName || 'specified name' }}</li>
@@ -85,7 +85,7 @@
         </div>
 
         <div class="contact-info">
-          <p>Questions about your order? Contact us at committee@example.com</p>
+          <p>Questions about your order? Contact us at orders@example.com</p>
         </div>
 
         <div v-if="loggingError" class="error-message logging-error">
