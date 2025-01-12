@@ -43,7 +43,6 @@
                 </template>
               </span>
             </div>
-            </div>
             <div class="info-row">
               <span class="label">Student Grade:</span>
               <span class="value">{{ formatGrade(sessionData?.metadata?.studentGrade) }}</span>
