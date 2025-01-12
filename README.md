@@ -199,4 +199,3 @@ For technical issues:
 - Check Netlify deployment logs
 - Monitor Stripe dashboard for payment issues
 - Review Google Sheets for order tracking
-- Contact: orders@example.com
