@@ -1,9 +1,33 @@
-# Event T-Shirt Store Documentation
+# Online Store Documentation
 
 ## Overview
-This is a Vue.js-based e-commerce application designed for selling t-shirts. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+This is a Vue.js-based e-commerce application designed for selling products. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
 
 ## Tech Stack
+
+
+
+
 - Frontend: Vue 3 with TypeScript
 - Payment Processing: Stripe
 - Hosting & Serverless: Netlify
@@ -12,20 +36,28 @@ This is a Vue.js-based e-commerce application designed for selling t-shirts. The
 
 ## Project Structure
 ```
+
+
 ├── netlify
 │   └── functions/              # Serverless functions
 │       ├── create-checkout.js  # Stripe checkout session creation
 │       ├── get-session.js      # Retrieve session details
 │       ├── log-to-sheets.js    # Google Sheets logging
+
+
 │       └── send-email.js       # Email notifications
 ├── src
 │   ├── assets/                 # Static assets
 │   ├── components/             # Vue components
 │   ├── router/                 # Vue Router configuration
 │   ├── services/               # Service layer
+
+
 │   │   └── googleSheetsLogger.ts
 │   └── views/                  # Page components
 │       ├── HomeView.vue        # Main order form
+
+
 │       └── SuccessView.vue     # Order confirmation
 ├── netlify.toml               # Netlify configuration
 └── package.json              # Project dependencies
@@ -198,3 +230,5 @@ For technical issues:
 - Check Netlify deployment logs
 - Monitor Stripe dashboard for payment issues
 - Review Google Sheets for order tracking
+
+
