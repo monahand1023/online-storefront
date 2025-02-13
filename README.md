@@ -2,31 +2,9 @@
 
 ## Overview
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-This is a Vue.js-based e-commerce application designed for selling products. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
+This is a Vue.js-based e-commerce application designed for selling products. I originally created this website for my kid's school because they needed an online ordering portal for ordering t-shirts for a school event. After publsihing it, I decided to make it an open-source project so anyone could download, build, and deploy this simple and efficient application for their own online store. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
 
 ## Tech Stack
-
-
-
 
 - Frontend: Vue 3 with TypeScript
 - Payment Processing: Stripe
