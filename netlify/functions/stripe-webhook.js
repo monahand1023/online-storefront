@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { getStore } from '@netlify/blobs';
 import { sendConfirmationEmail } from './send-email.js';
 import { logToSheets } from './log-to-sheets.js';
 
@@ -22,6 +23,22 @@ export const handler = async (event) => {
     const session = stripeEvent.data.object;
 
     if (session.payment_status === 'paid') {
+      // Idempotency check — skip if we've already processed this session
+      let alreadyProcessed = false;
+      let store;
+      try {
+        store = getStore('processed-webhooks');
+        const existing = await store.get(session.id);
+        if (existing !== null) {
+          console.log(`Duplicate webhook for session ${session.id}, skipping`);
+          return { statusCode: 200, body: JSON.stringify({ received: true }) };
+        }
+      } catch (err) {
+        // Blob store unavailable — log and proceed rather than blocking order processing
+        console.warn('Blob store unavailable for idempotency check, proceeding anyway:', err.message);
+        store = null;
+      }
+
       // Send confirmation email
       try {
         await sendConfirmationEmail(session);
@@ -35,6 +52,15 @@ export const handler = async (event) => {
         await logToSheets(session);
       } catch (err) {
         console.error('Failed to log to sheets:', err.message);
+      }
+
+      // Mark session as processed (7-day TTL)
+      if (store !== null) {
+        try {
+          await store.set(session.id, Date.now().toString(), { ttl: 7 * 24 * 60 * 60 });
+        } catch (err) {
+          console.warn('Failed to mark session as processed in blob store:', err.message);
+        }
       }
     }
   }
