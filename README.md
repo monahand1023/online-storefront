@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a Vue.js-based e-commerce application designed for selling products. I originally created this website for my kid's school because they needed an online ordering portal for ordering t-shirts for a school event. After publsihing it, I decided to make it an open-source project so anyone could download, build, and deploy this simple and efficient application for their own online store. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
+This is a Vue.js-based e-commerce application designed for selling products. I originally created this website for my kid's school because they needed an online ordering portal for ordering t-shirts for a school event. After publishing it, I decided to make it an open-source project so anyone could download, build, and deploy this simple and efficient application for their own online store. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
 
 ## Tech Stack
 
@@ -13,32 +13,29 @@ This is a Vue.js-based e-commerce application designed for selling products. I o
 - Order Tracking: Google Sheets API
 
 ## Project Structure
+
 ```
-
-
-├── netlify
+├── netlify/
 │   └── functions/              # Serverless functions
 │       ├── create-checkout.js  # Stripe checkout session creation
 │       ├── get-session.js      # Retrieve session details
 │       ├── log-to-sheets.js    # Google Sheets logging
-
-
-│       └── send-email.js       # Email notifications
-├── src
+│       ├── send-email.js       # Email notifications
+│       └── stripe-webhook.js   # Stripe webhook (email + logging on payment)
+├── src/
 │   ├── assets/                 # Static assets
-│   ├── components/             # Vue components
+│   ├── config/
+│   │   └── store.ts            # Product config: pickup dates, sizes, price
 │   ├── router/                 # Vue Router configuration
-│   ├── services/               # Service layer
-
-
+│   ├── services/
 │   │   └── googleSheetsLogger.ts
-│   └── views/                  # Page components
+│   ├── tests/                  # Vitest unit tests
+│   └── views/
 │       ├── HomeView.vue        # Main order form
-
-
 │       └── SuccessView.vue     # Order confirmation
-├── netlify.toml               # Netlify configuration
-└── package.json              # Project dependencies
+├── .env.example               # Required environment variables (template)
+├── netlify.toml               # Netlify configuration + security headers
+└── package.json               # Project dependencies
 ```
 
 ## Core Components
@@ -49,58 +46,59 @@ This is a Vue.js-based e-commerce application designed for selling products. I o
   - Multiple shirt size/quantity selection
   - Student information collection
   - Pickup details
-  - Promo code support (40% discount)
+  - Promo code support (40% discount — validated server-side)
   - Stripe checkout integration
 
 ### SuccessView.vue
 - Order confirmation page
-- Features:
-  - Displays order summary
-  - Sends confirmation email
-  - Logs transaction to Google Sheets
-  - Shows pickup instructions
+- Displays order summary from Stripe session data
+- Post-payment side effects (email, Sheets logging) are handled by the Stripe webhook, not the browser
 
 ## Serverless Functions
 
 ### create-checkout.js
 - Creates Stripe checkout session
-- Handles:
-  - Price calculation with discounts
-  - Order metadata collection
-  - Multiple item support
+- Server-side input validation: size allowlist, quantity range 1–10, control-char stripping
+- Server-side promo code validation against `DISCOUNT_CODE` env var
 
 ### get-session.js
 - Retrieves Stripe session details
-- Used for order confirmation
+- Used to display order confirmation after redirect
+
+### stripe-webhook.js
+- Receives `checkout.session.completed` events from Stripe
+- Sends confirmation email and logs to Google Sheets when `payment_status === 'paid'`
+- Email/logging errors do not fail the webhook (Stripe retry safety)
 
 ### log-to-sheets.js
 - Logs order details to Google Sheets
-- Tracks:
-  - Order details
-  - Customer information
-  - Payment status
-  - Pickup information
+- Tracks order details, customer information, payment status, and pickup information
 
 ### send-email.js
-- Sends confirmation emails
-- Includes:
-  - Order summary
-  - Pickup instructions
-  - Customer details
+- Sends confirmation emails to the customer (CC to admin)
+- Includes order summary and pickup instructions
 
-## Environment Variables Required
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
 ```
-STRIPE_SECRET_KEY=           # Stripe secret key
-STRIPE_PUBLISHABLE_KEY=      # Stripe publishable key
-VITE_STRIPE_PUBLISHABLE_KEY= # Stripe publishable key for frontend
-GOOGLE_SERVICE_ACCOUNT_CREDENTIALS= # Google service account JSON
-GOOGLE_SPREADSHEET_ID=       # Google Sheets ID
-SMTP_HOST=                   # SMTP server host
-SMTP_PORT=                   # SMTP server port
-SMTP_USER=                   # SMTP username
-SMTP_PASSWORD=               # SMTP password
-VITE_DISCOUNT_CODE=         # Discount code for 40% off
-```
+
+Key variables:
+
+| Variable | Where to set | Purpose |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | Netlify dashboard | Stripe API secret |
+| `STRIPE_WEBHOOK_SECRET` | Netlify dashboard | Stripe webhook signature verification |
+| `DISCOUNT_CODE` | Netlify dashboard | Promo code for 40% discount (server-side only) |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Netlify dashboard | Email sending |
+| `GOOGLE_SERVICE_ACCOUNT_CREDENTIALS` | Netlify dashboard | Google Sheets API (full JSON key) |
+| `GOOGLE_SPREADSHEET_ID` | Netlify dashboard | Target spreadsheet |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Netlify dashboard | Stripe publishable key (safe for browser) |
+
+**Important:** Never use the `VITE_` prefix for secrets. Any `VITE_` variable is bundled into the browser JavaScript bundle and is publicly visible.
 
 ## Deployment Instructions
 
@@ -135,59 +133,65 @@ VITE_DISCOUNT_CODE=         # Discount code for 40% off
    netlify deploy --prod
    ```
 
-4. **Post-Deployment Setup**
-   - Configure environment variables in Netlify dashboard
-   - Set up Stripe webhook endpoints
-   - Configure Google Sheets API credentials
-   - Test email notifications
+4. **Stripe Webhook Setup** (required for email confirmations and order logging)
 
-## Feature Flags and Configurations
+   After deploying:
+   - Go to [Stripe Dashboard → Developers → Webhooks](https://dashboard.stripe.com/webhooks)
+   - Click **Add endpoint**
+   - Set the endpoint URL to:
+     ```
+     https://YOUR_NETLIFY_URL/.netlify/functions/stripe-webhook
+     ```
+   - Select the event: `checkout.session.completed`
+   - Copy the **Signing secret** (`whsec_...`) and add it as `STRIPE_WEBHOOK_SECRET` in your Netlify environment variables
+
+5. **Post-Deployment Setup**
+   - Configure all environment variables in the Netlify dashboard
+   - Configure Google Sheets API credentials
+   - Test a checkout end-to-end
+
+## Running Tests
+
+```bash
+npm test
+```
+
+Tests cover: size validation, quantity validation, control-character sanitization, discount code matching, and webhook handler logic (including signature failure, paid/unpaid branching, and error resilience).
+
+## Configuration
+
+### Pickup Dates and Product Config
+
+Edit `src/config/store.ts` to update pickup dates, price, sizes, or programs. Changes take effect on the next build — no hunting through component files.
 
 ### Discount System
-- 40% discount available with promo code
-- Configured through `VITE_DISCOUNT_CODE` environment variable
+- 40% discount available with a promo code
+- The code is validated **server-side only** against the `DISCOUNT_CODE` environment variable
+- The discount code is never exposed in the browser bundle
 
 ### Order Limits
-- Maximum 5 shirts per size
+- Up to 5 shirts per size selector (configurable in HomeView.vue)
+- Maximum 10 per size enforced server-side
 - Multiple sizes per order supported
 
-### Pickup Dates
-- Configurable pickup dates in `HomeView.vue`
+## Security
 
-## Data Flow
-
-1. **Order Submission**
-   ```
-   User Input → Stripe Checkout → Payment Processing
-        ↓
-   Success Confirmation → Email Notification
-        ↓
-   Google Sheets Logging
-   ```
-
-2. **Data Storage**
-   - Order details stored in Stripe metadata
-   - Backup logging to Google Sheets
-   - Email confirmations sent to both customer and admin
-
-## Security Considerations
-
-- Stripe handles all payment information
-- Environment variables protected from secrets scanning
-- Server-side validation for all inputs
-- CORS and security headers managed by Netlify
+- Stripe handles all payment card information
+- Discount validation is entirely server-side — the discount code is never bundled into frontend JS
+- All serverless functions return generic error messages to clients; full error details are logged server-side only
+- Content Security Policy, X-Frame-Options, X-Content-Type-Options, and Referrer-Policy headers are set in `netlify.toml`
+- Server-side validation for all inputs: size allowlist, integer quantity range, control-character stripping
 
 ## Maintenance and Monitoring
 
 ### Order Tracking
-- All orders logged to Google Sheets
-- Accessible through shared spreadsheet
-- Includes payment status and customer details
+- All orders logged to Google Sheets via the Stripe webhook
+- Includes payment status, customer details, and pickup information
 
 ### Error Handling
 - Failed payments tracked in Stripe dashboard
-- Email sending failures logged
-- Google Sheets logging errors captured
+- Webhook errors logged in Netlify function logs
+- Google Sheets logging errors captured without failing the webhook
 
 ## Future Improvements
 
@@ -208,5 +212,3 @@ For technical issues:
 - Check Netlify deployment logs
 - Monitor Stripe dashboard for payment issues
 - Review Google Sheets for order tracking
-
-
