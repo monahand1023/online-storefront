@@ -2,34 +2,34 @@
 <template>
   <div class="store-container">
     <h1>Japan Night T-Shirts</h1>
-    
+
     <div class="product-card">
       <img src="/shirt-placeholder.jpg" alt="Japan Night T-Shirt" class="product-image">
       <h2>Limited Edition T-Shirt</h2>
       <p class="price">${{ price.toFixed(2) }} each</p>
-      
+
       <form @submit.prevent="handleCheckout">
         <!-- Multiple shirt orders section -->
         <div class="shirt-orders">
           <div v-for="(order, index) in shirtOrders" :key="index" class="shirt-order">
             <div class="order-header">
               <h3>Shirt Order #{{ index + 1 }}</h3>
-              <button 
-                v-if="shirtOrders.length > 1" 
-                type="button" 
+              <button
+                v-if="shirtOrders.length > 1"
+                type="button"
                 class="remove-button"
                 @click="removeShirtOrder(index)"
               >
                 Remove
               </button>
             </div>
-            
+
             <div class="product-options">
               <div class="size-selector">
                 <label :for="'size-' + index">Size: <span class="required">*</span></label>
-                <select 
-                  v-model="order.size" 
-                  :id="'size-' + index" 
+                <select
+                  v-model="order.size"
+                  :id="'size-' + index"
                   required
                   :class="{ 'error-input': showErrors && !order.size }"
                 >
@@ -39,12 +39,12 @@
                   </option>
                 </select>
               </div>
-              
+
               <div class="quantity-selector">
                 <label :for="'quantity-' + index">Quantity: <span class="required">*</span></label>
-                <select 
-                  v-model="order.quantity" 
-                  :id="'quantity-' + index" 
+                <select
+                  v-model="order.quantity"
+                  :id="'quantity-' + index"
                   required
                   :class="{ 'error-input': showErrors && !order.quantity }"
                 >
@@ -56,8 +56,8 @@
           </div>
         </div>
 
-        <button 
-          type="button" 
+        <button
+          type="button"
           class="add-shirt-button"
           @click="addShirtOrder"
         >
@@ -83,9 +83,9 @@
         <div class="student-info">
           <div class="form-group">
             <label for="grade">Student's Grade: <span class="required">*</span></label>
-            <select 
-              v-model="studentGrade" 
-              id="grade" 
+            <select
+              v-model="studentGrade"
+              id="grade"
               required
               :class="{ 'error-input': showErrors && !studentGrade }"
             >
@@ -98,9 +98,9 @@
 
           <div class="form-group">
             <label for="program">Program: <span class="required">*</span></label>
-            <select 
-              v-model="program" 
-              id="program" 
+            <select
+              v-model="program"
+              id="program"
               required
               :class="{ 'error-input': showErrors && !program }"
             >
@@ -113,10 +113,10 @@
 
           <div class="form-group">
             <label for="pickupName">Who will pick up the t-shirt? <span class="required">*</span></label>
-            <input 
-              type="text" 
-              id="pickupName" 
-              v-model="pickupName" 
+            <input
+              type="text"
+              id="pickupName"
+              v-model="pickupName"
               placeholder="Enter full name"
               required
               :class="{ 'error-input': showErrors && !pickupName.trim() }"
@@ -125,9 +125,9 @@
 
           <div class="form-group">
             <label for="pickupDate">Pickup Date: <span class="required">*</span></label>
-            <select 
-              v-model="pickupDate" 
-              id="pickupDate" 
+            <select
+              v-model="pickupDate"
+              id="pickupDate"
               required
               :class="{ 'error-input': showErrors && !pickupDate }"
             >
@@ -140,15 +140,15 @@
 
           <div class="form-group">
             <label for="promoCode">Promo Code:</label>
-            <input 
-              type="text" 
-              id="promoCode" 
-              v-model="promoCode" 
+            <input
+              type="text"
+              id="promoCode"
+              v-model="promoCode"
               placeholder="Enter promo code"
             >
           </div>
         </div>
-        
+
         <div v-if="error" class="error-message">
           {{ error }}
         </div>
@@ -164,20 +164,49 @@
   </div>
 </template>
 
-<script>
-import { loadStripe } from '@stripe/stripe-js'
+<script lang="ts">
+import { defineComponent } from 'vue'
+import { loadStripe, type Stripe } from '@stripe/stripe-js'
+import {
+  BASE_PRICE_DOLLARS,
+  AVAILABLE_SIZES,
+  PICKUP_DATES,
+  GRADES,
+  PROGRAMS,
+} from '@/config/store'
 
-export default {
-  data() {
+interface ShirtOrder {
+  size: string
+  quantity: number | string
+}
+
+interface ComponentData {
+  price: number
+  sizes: string[]
+  grades: string[]
+  programs: string[]
+  pickupDates: string[]
+  shirtOrders: ShirtOrder[]
+  studentGrade: string
+  program: string
+  pickupName: string
+  pickupDate: string
+  promoCode: string
+  isLoading: boolean
+  error: string | null
+  stripe: Stripe | null
+  showErrors: boolean
+}
+
+export default defineComponent({
+  data(): ComponentData {
     return {
-      price: 25.00,
-      sizes: ['S', 'M', 'L', 'XL'],
-      grades: ['K', '1', '2', '3', '4', '5'],
-      programs: ['Spanish', 'Japanese'],
-      pickupDates: ['2/15', '2/16', '2/17'],
-      shirtOrders: [
-        { size: '', quantity: '' }
-      ],
+      price: BASE_PRICE_DOLLARS,
+      sizes: AVAILABLE_SIZES,
+      grades: GRADES,
+      programs: PROGRAMS,
+      pickupDates: PICKUP_DATES,
+      shirtOrders: [{ size: '', quantity: '' }],
       studentGrade: '',
       program: '',
       pickupName: '',
@@ -186,100 +215,110 @@ export default {
       isLoading: false,
       error: null,
       stripe: null,
-      showErrors: false
+      showErrors: false,
     }
   },
   computed: {
-    totalQuantity() {
-      return this.shirtOrders.reduce((sum, order) => sum + (parseInt(order.quantity) || 0), 0)
+    totalQuantity(): number {
+      return this.shirtOrders.reduce(
+        (sum: number, order: ShirtOrder) => sum + (parseInt(String(order.quantity)) || 0),
+        0
+      )
     },
-    subtotal() {
+    subtotal(): number {
       return this.totalQuantity * this.price
     },
-    checkoutButtonText() {
+    checkoutButtonText(): string {
       if (this.isLoading) return 'Processing...'
       if (this.totalQuantity === 0) return 'Add items to cart'
       return `Checkout (Total: $${this.subtotal.toFixed(2)})`
-    }
+    },
   },
   async created() {
     try {
       if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
-        throw new Error('Stripe publishable key is not set');
+        throw new Error('Stripe publishable key is not set')
       }
-      this.stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+      this.stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
       if (!this.stripe) {
-        throw new Error('Failed to initialize Stripe');
+        throw new Error('Failed to initialize Stripe')
       }
     } catch (error) {
-      console.error('Stripe initialization error:', error);
-      this.error = 'Failed to initialize payment system. Please refresh the page or try again later.';
+      console.error('Stripe initialization error:', error)
+      this.error = 'Failed to initialize payment system. Please refresh the page or try again later.'
     }
   },
   methods: {
     addShirtOrder() {
-      this.shirtOrders.push({ size: '', quantity: '' });
+      this.shirtOrders.push({ size: '', quantity: '' })
     },
-    removeShirtOrder(index) {
-      this.shirtOrders.splice(index, 1);
+    removeShirtOrder(index: number) {
+      this.shirtOrders.splice(index, 1)
     },
-    validateOrders() {
-      return this.shirtOrders.every(order => order.size && order.quantity) &&
-             this.totalQuantity > 0;
+    validateOrders(): boolean {
+      return (
+        this.shirtOrders.every((order: ShirtOrder) => order.size && order.quantity) &&
+        this.totalQuantity > 0
+      )
     },
     async handleCheckout() {
-      this.showErrors = true;
-      
-      if (!this.validateOrders() || !this.studentGrade || 
-          !this.program || !this.pickupName.trim() || !this.pickupDate) {
-        this.error = 'Please fill in all required fields';
-        return;
+      this.showErrors = true
+
+      if (
+        !this.validateOrders() ||
+        !this.studentGrade ||
+        !this.program ||
+        !this.pickupName.trim() ||
+        !this.pickupDate
+      ) {
+        this.error = 'Please fill in all required fields'
+        return
       }
 
-      this.isLoading = true;
-      this.error = null;
-      
+      this.isLoading = true
+      this.error = null
+
       try {
         if (!this.stripe) {
-          throw new Error('Payment system not initialized');
+          throw new Error('Payment system not initialized')
         }
 
         const response = await fetch('/.netlify/functions/create-checkout', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             orders: this.shirtOrders,
             studentGrade: this.studentGrade,
             program: this.program,
             pickupName: this.pickupName,
             pickupDate: this.pickupDate,
-            promoCode: this.promoCode
+            promoCode: this.promoCode,
           }),
-        });
-        
+        })
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Checkout failed');
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Checkout failed')
         }
-        
-        const { id: sessionId } = await response.json();
-        
-        const { error } = await this.stripe.redirectToCheckout({ sessionId });
-        
+
+        const { id: sessionId } = await response.json()
+
+        const { error } = await this.stripe.redirectToCheckout({ sessionId })
+
         if (error) {
-          throw new Error(error.message);
+          throw new Error(error.message)
         }
-      } catch (error) {
-        console.error('Checkout error:', error);
-        this.error = error.message || 'An error occurred during checkout. Please try again.';
+      } catch (error: unknown) {
+        console.error('Checkout error:', error)
+        this.error =
+          (error instanceof Error ? error.message : null) ||
+          'An error occurred during checkout. Please try again.'
       } finally {
-        this.isLoading = false;
+        this.isLoading = false
       }
-    }
-  }
-}
+    },
+  },
+})
 </script>
 
 <style scoped>
@@ -345,7 +384,9 @@ export default {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.size-selector select,
+.quantity-selector select {
   width: 100%;
   padding: 12px;
   border: 1px solid #ddd;
@@ -354,6 +395,7 @@ export default {
   background-color: #fff;
 }
 
+/* Custom dropdown arrow — applied once via shared selector */
 select {
   appearance: none;
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
@@ -488,26 +530,5 @@ select {
   border-top: 1px solid #dee2e6;
   font-weight: bold;
   color: #333;
-}
-
-.size-selector,
-.quantity-selector {
-  flex: 1;
-}
-
-.size-selector select,
-.quantity-selector select {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1em;
-  background-color: #fff;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 12px;
-  padding-right: 30px;
 }
 </style>

@@ -10,4 +10,20 @@
   targetPort = 5173
 
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "STRIPE_PUBLISHABLE_KEY,VITE_STRIPE_PUBLISHABLE_KEY,GOOGLE_SPREADSHEET_ID"
+  SECRETS_SCAN_OMIT_KEYS = "VITE_STRIPE_PUBLISHABLE_KEY,GOOGLE_SPREADSHEET_ID"
+  # Server-only secrets — set these in the Netlify dashboard, not here:
+  # STRIPE_SECRET_KEY
+  # STRIPE_WEBHOOK_SECRET  (copy from Stripe Dashboard → Developers → Webhooks after registering the endpoint)
+  # DISCOUNT_CODE
+  # SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
+  # GOOGLE_SERVICE_ACCOUNT_CREDENTIALS, GOOGLE_SPREADSHEET_ID
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Stripe JS is loaded from js.stripe.com; the Stripe iframe runs on js.stripe.com
+    # No eval() usage; no external fonts or images beyond data URIs
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.stripe.com; frame-src https://js.stripe.com"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
