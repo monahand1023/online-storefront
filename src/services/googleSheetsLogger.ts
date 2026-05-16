@@ -1,4 +1,7 @@
 // src/services/googleSheetsLogger.ts
+// NOTE: Email and logging are now primarily handled by the Stripe webhook
+// (netlify/functions/stripe-webhook.js). This service is kept as a fallback
+// but is no longer called from SuccessView.vue.
 
 interface Transaction {
   timestamp: string;
@@ -30,29 +33,46 @@ class GoogleSheetsLogger {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
     }).replace(',', '');
   }
 
-  async logTransaction(transaction: Omit<Transaction, 'timestamp'>, orderSummary: string[]): Promise<void> {
+  /**
+   * Derive a stable, deterministic order ID from the Stripe session ID.
+   * Uses the last 16 characters of the session ID (after stripping the cs_/cs_test_ prefix)
+   * so that all rows from the same order share the same ID even if the logger
+   * is called multiple times.
+   */
+  private deriveOrderId(sessionId: string): string {
+    const stripped = sessionId.replace('cs_test_', '').replace('cs_', '');
+    return `JN-${stripped.slice(-16).toUpperCase()}`;
+  }
+
+  async logTransaction(
+    transaction: Omit<Transaction, 'timestamp'>,
+    orderSummary: string[],
+    sessionId?: string,
+  ): Promise<void> {
     try {
       console.log('Attempting to log transaction...');
       const timestamp = this.formatDate(new Date());
-      const orderId = `JN-${Date.now().toString(36).toUpperCase()}`;
-      
+      const orderId = sessionId
+        ? this.deriveOrderId(sessionId)
+        : `JN-${Date.now().toString(36).toUpperCase()}`;
+
       // Calculate total quantity and price per shirt
       const totalQuantity = orderSummary.reduce((sum, order) => {
-        const [quantity] = order.split('x ').map(part => parseInt(part.trim()));
-        return sum + quantity;
+        const qty = parseInt(order.split('x ')[0].trim()) || 0;
+        return sum + qty;
       }, 0);
-      
-      const pricePerShirt = transaction.amount / totalQuantity;
-      
+
+      const pricePerShirt = totalQuantity > 0 ? transaction.amount / totalQuantity : transaction.amount;
+
       // Create separate log entries for each size with proportional amounts
       const orders = orderSummary.map(order => {
-        const [quantity, size] = order.split('x ').map(part => part.trim());
-        const itemQuantity = parseInt(quantity);
-        const itemAmount = pricePerShirt * itemQuantity; // Amount for this size based on quantity
+        const [qtyStr, size] = order.split('x ').map(part => part.trim());
+        const itemQuantity = parseInt(qtyStr) || 1;
+        const itemAmount = pricePerShirt * itemQuantity;
 
         return {
           timestamp,
@@ -67,7 +87,7 @@ class GoogleSheetsLogger {
           program: transaction.program,
           pickupName: transaction.pickupName,
           pickupDate: transaction.pickupDate,
-          discountApplied: transaction.discountApplied
+          discountApplied: transaction.discountApplied,
         };
       });
 
@@ -75,9 +95,7 @@ class GoogleSheetsLogger {
       for (const order of orders) {
         await fetch(this.SHEETS_API_ENDPOINT, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(order),
         });
       }

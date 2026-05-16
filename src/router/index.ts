@@ -11,10 +11,10 @@ const router = createRouter({
       component: HomeView,
     },
     {
-	  path: '/success',
-  	  name: 'success',
-  	  component: SuccessView
-	},
+      path: '/success',
+      name: 'success',
+      component: SuccessView,
+    },
   ],
 })
 
