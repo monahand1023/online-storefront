@@ -153,11 +153,7 @@
           {{ error }}
         </div>
 
-        <div v-if="discountApplied" class="discount-message">
-          40% discount applied!
-        </div>
-
-        <button 
+        <button
           type="submit"
           class="checkout-button"
           :disabled="isLoading || totalQuantity === 0">
@@ -194,16 +190,11 @@ export default {
     }
   },
   computed: {
-     discountApplied() {
-      const validCode = import.meta.env.VITE_DISCOUNT_CODE || '';
-      return this.promoCode.trim().toUpperCase() === validCode.toUpperCase();
-    },
     totalQuantity() {
       return this.shirtOrders.reduce((sum, order) => sum + (parseInt(order.quantity) || 0), 0)
     },
     subtotal() {
-      const amount = this.totalQuantity * this.price
-      return this.discountApplied ? amount * 0.6 : amount
+      return this.totalQuantity * this.price
     },
     checkoutButtonText() {
       if (this.isLoading) return 'Processing...'
@@ -264,7 +255,7 @@ export default {
             program: this.program,
             pickupName: this.pickupName,
             pickupDate: this.pickupDate,
-            discountApplied: this.discountApplied
+            promoCode: this.promoCode
           }),
         });
         
@@ -390,15 +381,6 @@ select {
   background: #f8d7da;
   border-radius: 4px;
   border: 1px solid #dc3545;
-}
-
-.discount-message {
-  color: #4CAF50;
-  padding: 10px;
-  margin: 10px 0;
-  border: 1px solid #4CAF50;
-  border-radius: 4px;
-  background-color: #e8f5e9;
 }
 
 .checkout-button {
