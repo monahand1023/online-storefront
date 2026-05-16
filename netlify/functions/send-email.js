@@ -1,6 +1,73 @@
-// netlify/functions/send-email.js
 import nodemailer from 'nodemailer';
 
+/**
+ * Send a confirmation email for a completed Stripe checkout session.
+ * Can be called directly from the webhook handler.
+ * @param {object} session - Stripe checkout session object
+ */
+export async function sendConfirmationEmail(session) {
+  const email = session.customer_details?.email;
+  if (!email) {
+    throw new Error('No email address in session customer_details');
+  }
+
+  const metadata = session.metadata || {};
+  const orderItems = metadata.ordersSummary
+    ? metadata.ordersSummary.split(', ').map(order => {
+        const [qty, size] = order.split('x ').map(p => p.trim());
+        return `${qty} × Size ${size}`;
+      })
+    : [];
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: true,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  });
+
+  const amountDisplay = `$${(session.amount_total / 100).toFixed(2)}`;
+  const pickupDate = metadata.pickupDate || 'your selected date';
+  const pickupName = metadata.pickupName || 'the name provided';
+
+  const mailOptions = {
+    from: 'japan.night.shirts@gmail.com',
+    to: email,
+    cc: 'japan.night.shirts@gmail.com',
+    subject: 'Japan Night T-Shirt Order Confirmation',
+    html: `
+      <h1>Thank You for Your Order!</h1>
+      <h2>Order Details:</h2>
+      <h3>Order Items:</h3>
+      <ul>
+        ${orderItems.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+      <p>Total Amount: ${amountDisplay}</p>
+      <p>Pickup Name: ${metadata.pickupName || 'Not provided'}</p>
+      <p>Pickup Date: ${metadata.pickupDate || 'Not provided'}</p>
+      <p>Student Grade: ${metadata.studentGrade || 'Not provided'}</p>
+      <p>Program: ${metadata.program || 'Not provided'}</p>
+
+      <h2>What's Next?</h2>
+      <ul>
+        <li>Your t-shirt(s) will be available for pickup on ${pickupDate}</li>
+        <li>Please bring ID for verification during pickup</li>
+        <li>The pickup person must match the name provided: ${pickupName}</li>
+      </ul>
+
+      <p>If you have any questions, please contact us at japan.night.shirts@gmail.com</p>
+    `
+  };
+
+  const result = await transporter.sendMail(mailOptions);
+  console.log('Email sent successfully:', { messageId: result.messageId });
+}
+
+// HTTP handler — kept for any direct invocations but email/logging is now
+// primarily handled by the Stripe webhook.
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
@@ -10,99 +77,57 @@ export const handler = async (event) => {
   }
 
   try {
-    console.log('Starting email send process...');
-    
     if (!event.body) {
-      console.error('No request body provided');
-      throw new Error('No request body provided');
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'No request body provided' }),
+      };
     }
-    
+
     const { email, orderDetails } = JSON.parse(event.body);
-    
+
     if (!email) {
-      console.error('No email address provided');
-      throw new Error('No email address provided');
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'No email address provided' }),
+      };
     }
-    
+
     if (!orderDetails) {
-      console.error('No order details provided');
-      throw new Error('No order details provided');
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'No order details provided' }),
+      };
     }
-    
-    console.log('Request data received:', { 
-      email, 
-      hasOrderItems: !!orderDetails.orderItems,
-      pickupDate: orderDetails.pickupDate,
-      totalAmount: orderDetails.amount_total
-    });
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
+    // Build a minimal session-like object so we can reuse sendConfirmationEmail
+    const syntheticSession = {
+      customer_details: { email },
+      amount_total: orderDetails.amount_total,
+      metadata: {
+        ordersSummary: orderDetails.orderItems
+          ? orderDetails.orderItems
+              .map(item => item.replace(' × Size ', 'x '))
+              .join(', ')
+          : '',
+        pickupDate: orderDetails.pickupDate,
+        pickupName: orderDetails.pickupName,
+        studentGrade: orderDetails.studentGrade,
+        program: orderDetails.program,
       },
-    });
-
-    console.log('SMTP Configuration:', {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      user: process.env.SMTP_USER,
-      hasPassword: !!process.env.SMTP_PASSWORD
-    });
-
-    const mailOptions = {
-      from: 'japan.night.shirts@gmail.com',
-      to: email,
-      cc: 'japan.night.shirts@gmail.com',
-      subject: 'Japan Night T-Shirt Order Confirmation',
-      html: `
-        <h1>Thank You for Your Order!</h1>
-        <h2>Order Details:</h2>
-        <h3>Order Items:</h3>
-        <ul>
-          ${orderDetails.orderItems.map(item => `<li>${item}</li>`).join('')}
-        </ul>
-        <p>Total Amount: $${(orderDetails.amount_total / 100).toFixed(2)}</p>
-        <p>Pickup Name: ${orderDetails.pickupName}</p>
-        <p>Pickup Date: ${orderDetails.pickupDate}</p>
-        <p>Student Grade: ${orderDetails.studentGrade}</p>
-        <p>Program: ${orderDetails.program}</p>
-        
-        <h2>What's Next?</h2>
-        <ul>
-          <li>Your t-shirt(s) will be available for pickup on ${orderDetails.pickupDate}</li>
-          <li>Please bring ID for verification during pickup</li>
-          <li>The pickup person must match the name provided: ${orderDetails.pickupName}</li>
-        </ul>
-        
-        <p>If you have any questions, please contact us at japan.night.shirts@gmail.com</p>
-      `
     };
 
-    console.log('Attempting to send email...');
-    const result = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', {
-      messageId: result.messageId,
-      response: result.response
-    });
+    await sendConfirmationEmail(syntheticSession);
 
     return {
       statusCode: 200,
       body: JSON.stringify({ message: 'Email sent successfully' }),
     };
   } catch (error) {
-    console.error('Email error:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      stack: error.stack
-    });
+    console.error('Email error:', error.message, error.stack);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to send email', details: error.message }),
+      body: JSON.stringify({ error: 'An internal error occurred. Please try again.' }),
     };
   }
 };

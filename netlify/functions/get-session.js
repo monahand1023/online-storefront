@@ -36,10 +36,10 @@ export const handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('Error retrieving session:', error);
+    console.error('Error retrieving session:', error.message, error.stack);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to retrieve session details' }),
+      body: JSON.stringify({ error: 'An internal error occurred. Please try again.' }),
     };
   }
 };

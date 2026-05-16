@@ -4,7 +4,7 @@
     <div class="success-card">
       <div class="success-icon">✓</div>
       <h1>Thank You for Your Order!</h1>
-      
+
       <div v-if="isLoading" class="loading">
         Loading order details for your confirmation. One moment please...
       </div>
@@ -33,6 +33,7 @@
               <span class="label">Amount:</span>
               <span class="value">
                 <template v-if="sessionData?.metadata?.discountApplied === 'true'">
+                  <!-- Reconstruct pre-discount price: divide final total by 0.6 (discount factor) -->
                   <span class="original-price">${{ formatAmount(sessionData?.amount_total / 0.6) }}</span>
                   <span class="final-price">${{ formatAmount(sessionData?.amount_total) }}</span>
                   <span class="discount-tag">40% Off</span>
@@ -87,14 +88,6 @@
           <p>Questions about your order? Contact us at japan.night.shirts@gmail.com</p>
         </div>
 
-        <div v-if="loggingError" class="error-message logging-error">
-          Note: There was an issue recording your order details, but your order has been processed successfully.
-        </div>
-
-        <div v-if="emailError" class="error-message email-error">
-          Note: There was an issue sending your confirmation email, but your order has been processed successfully.
-        </div>
-
         <router-link to="/" class="back-button">
           Return to Store
         </router-link>
@@ -104,7 +97,7 @@
 </template>
 
 <script>
-import { googleSheetsLogger } from '@/services/googleSheetsLogger'
+// Post-payment actions (email, logging) are handled by the Stripe webhook
 
 export default {
   data() {
@@ -112,92 +105,44 @@ export default {
       sessionData: null,
       isLoading: true,
       error: null,
-      loggingError: null,
-      emailError: null,
       orderItems: []
     }
   },
   async created() {
-    const sessionId = new URLSearchParams(window.location.search).get('session_id')
-    
-    if (!sessionId) {
-      this.error = 'No order information available'
-      this.isLoading = false
-      return
-    }
-
-    try {
-      const response = await fetch(`/.netlify/functions/get-session?session_id=${sessionId}`)
-      if (!response.ok) {
-        throw new Error('Failed to load order details')
-      }
-      
-      this.sessionData = await response.json()
-      
-      // Parse the order summary into readable format
-      if (this.sessionData.metadata?.ordersSummary) {
-        this.orderItems = this.sessionData.metadata.ordersSummary.split(', ').map(order => {
-          const [quantity, size] = order.split('x ').map(part => part.trim())
-          return `${quantity} × Size ${size}`
-        })
-      }
-
-      // Send confirmation email
-      if (this.sessionData.customer_details?.email) {
-        try {
-          const emailResponse = await fetch('/.netlify/functions/send-email', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: this.sessionData.customer_details.email,
-              orderDetails: {
-                ...this.sessionData.metadata,
-                amount_total: this.sessionData.amount_total,
-                orderItems: this.orderItems
-              }
-            }),
-          })
-
-          if (!emailResponse.ok) {
-            throw new Error('Failed to send confirmation email')
-          }
-        } catch (error) {
-          console.error('Failed to send email:', error)
-          this.emailError = 'There was an issue sending your confirmation email, but your order has been processed successfully.'
-        }
-      }
-      
-      // Log successful transactions to Google Sheets
-// In SuccessView.vue, update the logging section:
-if (this.sessionData.payment_status === 'paid') {
-  try {
-    const orderSummary = this.sessionData.metadata.ordersSummary.split(', ');
-    await googleSheetsLogger.logTransaction({
-      amount: this.sessionData.amount_total / 100,
-      status: this.sessionData.payment_status,
-      email: this.sessionData.customer_details?.email,
-      customerName: `${this.sessionData.customer_details?.name || 'Not provided'}`,
-      studentGrade: this.sessionData.metadata?.studentGrade,
-      program: this.sessionData.metadata?.program,
-      pickupName: this.sessionData.metadata?.pickupName,
-      pickupDate: this.sessionData.metadata?.pickupDate,
-      discountApplied: this.sessionData.metadata?.discountApplied === 'true'
-    }, orderSummary);
-  } catch (loggingError) {
-    console.error('Failed to log transaction to Google Sheets:', loggingError);
-    this.loggingError = 'There was an issue recording your order details, but your order has been processed successfully.';
-  }
-}
-    } catch (error) {
-      console.error('Failed to fetch session details:', error)
-      this.error = 'Unable to load order details. Please check your confirmation email.'
-    } finally {
-      this.isLoading = false
-    }
+    await this.fetchSession()
   },
   methods: {
+    async fetchSession() {
+      const sessionId = new URLSearchParams(window.location.search).get('session_id')
+
+      if (!sessionId) {
+        this.error = 'No order information available'
+        this.isLoading = false
+        return
+      }
+
+      try {
+        const response = await fetch(`/.netlify/functions/get-session?session_id=${sessionId}`)
+        if (!response.ok) {
+          throw new Error('Failed to load order details')
+        }
+
+        this.sessionData = await response.json()
+
+        // Parse the order summary into readable format
+        if (this.sessionData.metadata?.ordersSummary) {
+          this.orderItems = this.sessionData.metadata.ordersSummary.split(', ').map(order => {
+            const [quantity, size] = order.split('x ').map(part => part.trim())
+            return `${quantity} × Size ${size}`
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch session details:', error)
+        this.error = 'Unable to load order details. Please check your confirmation email.'
+      } finally {
+        this.isLoading = false
+      }
+    },
     formatAmount(amount) {
       return ((amount || 0) / 100).toFixed(2)
     },
@@ -255,13 +200,6 @@ if (this.sessionData.payment_status === 'paid') {
   background: #f8d7da;
   border-radius: 4px;
   border: 1px solid #dc3545;
-}
-
-.error-message.logging-error {
-  background-color: #fff3cd;
-  border-color: #ffeeba;
-  color: #856404;
-  margin-top: 20px;
 }
 
 .order-info {
@@ -352,7 +290,7 @@ if (this.sessionData.payment_status === 'paid') {
   background: #45a049;
 }
 
-/* Add new styles for multiple orders display */
+/* Styles for multiple orders display */
 .items-section {
   align-items: flex-start !important;
 }
@@ -368,13 +306,6 @@ if (this.sessionData.payment_status === 'paid') {
   background-color: #f8f9fa;
   border-radius: 4px;
   font-weight: 500;
-}
-
-.email-error {
-  background-color: #fff3cd;
-  border-color: #ffeeba;
-  color: #856404;
-  margin-top: 20px;
 }
 
 .original-price {
