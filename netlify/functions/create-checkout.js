@@ -41,8 +41,8 @@ export const handler = async (event) => {
           body: JSON.stringify({ error: `Invalid size: ${order.size}. Must be one of ${VALID_SIZES.join(', ')}` }),
         };
       }
-      const qty = parseInt(order.quantity);
-      if (!Number.isInteger(qty) || qty < 1 || qty > 10) {
+      const qty = parseInt(order.quantity, 10);
+      if (!Number.isInteger(Number(order.quantity)) || qty < 1 || qty > 10) {
         return {
           statusCode: 400,
           body: JSON.stringify({ error: 'Quantity must be an integer between 1 and 10' }),
