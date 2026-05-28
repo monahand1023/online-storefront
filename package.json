@@ -14,7 +14,7 @@
     "@netlify/blobs": "^10.7.7",
     "@stripe/stripe-js": "^5.5.0",
     "googleapis": "^172.0.0",
-    "nodemailer": "^6.9.16",
+    "nodemailer": "^8.0.5",
     "stripe": "^17.5.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
