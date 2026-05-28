@@ -91,6 +91,11 @@ export const handler = async (event) => {
       sum + parseInt(order.quantity), 0
     );
 
+    const originalAmountCents = orders.reduce(
+      (sum, order) => sum + baseAmount * parseInt(order.quantity),
+      0
+    );
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
@@ -102,7 +107,8 @@ export const handler = async (event) => {
         pickupName,
         pickupDate,
         totalQuantity: totalQuantity.toString(),
-        discountApplied: discountApplied ? 'true' : 'false'
+        discountApplied: discountApplied ? 'true' : 'false',
+        original_amount_cents: String(originalAmountCents),
       },
       success_url: successUrl,
       cancel_url: `${process.env.URL}`,

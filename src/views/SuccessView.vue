@@ -32,9 +32,8 @@
              <div class="info-row">
               <span class="label">Amount:</span>
               <span class="value">
-                <template v-if="sessionData?.metadata?.discountApplied === 'true'">
-                  <!-- Reconstruct pre-discount price: divide final total by DISCOUNT_FACTOR -->
-                  <span class="original-price">${{ formatAmount(sessionData?.amount_total / DISCOUNT_FACTOR) }}</span>
+                <template v-if="wasDiscounted">
+                  <span class="original-price">${{ formatAmount(originalAmount) }}</span>
                   <span class="final-price">${{ formatAmount(sessionData?.amount_total) }}</span>
                   <span class="discount-tag">40% Off</span>
                 </template>
@@ -99,8 +98,6 @@
 <script>
 // Post-payment actions (email, logging) are handled by the Stripe webhook
 
-const DISCOUNT_FACTOR = 0.6; // shared with create-checkout.js
-
 export default {
   data() {
     return {
@@ -109,6 +106,19 @@ export default {
       error: null,
       orderItems: []
     }
+  },
+  computed: {
+    wasDiscounted() {
+      return this.sessionData?.metadata?.discountApplied === 'true'
+    },
+    originalAmount() {
+      const meta = this.sessionData?.metadata?.original_amount_cents
+      if (meta) {
+        return parseInt(meta)
+      }
+      // Fallback for sessions created before this fix was deployed
+      return this.sessionData?.amount_total
+    },
   },
   async created() {
     await this.fetchSession()
