@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import { parseOrderSummary } from './shared/orderUtils.js';
+import { ADMIN_EMAIL } from './shared/config.js';
 
 /**
  * Send a confirmation email for a completed Stripe checkout session.
@@ -13,10 +15,7 @@ export async function sendConfirmationEmail(session) {
 
   const metadata = session.metadata || {};
   const orderItems = metadata.ordersSummary
-    ? metadata.ordersSummary.split(', ').map(order => {
-        const [qty, size] = order.split('x ').map(p => p.trim());
-        return `${qty} × Size ${size}`;
-      })
+    ? parseOrderSummary(metadata.ordersSummary).map(item => `${item.qty} × Size ${item.size}`)
     : [];
 
   const transporter = nodemailer.createTransport({
@@ -34,9 +33,9 @@ export async function sendConfirmationEmail(session) {
   const pickupName = metadata.pickupName || 'the name provided';
 
   const mailOptions = {
-    from: 'japan.night.shirts@gmail.com',
+    from: ADMIN_EMAIL,
     to: email,
-    cc: 'japan.night.shirts@gmail.com',
+    cc: ADMIN_EMAIL,
     subject: 'Japan Night T-Shirt Order Confirmation',
     html: `
       <h1>Thank You for Your Order!</h1>
@@ -58,7 +57,7 @@ export async function sendConfirmationEmail(session) {
         <li>The pickup person must match the name provided: ${pickupName}</li>
       </ul>
 
-      <p>If you have any questions, please contact us at japan.night.shirts@gmail.com</p>
+      <p>If you have any questions, please contact us at ${ADMIN_EMAIL}</p>
     `
   };
 
