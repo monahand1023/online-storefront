@@ -13,7 +13,7 @@ export const handler = async (event) => {
 
   const sessionId = event.queryStringParameters?.sessionId ?? event.queryStringParameters?.session_id;
 
-  if (!sessionId || !sessionId.startsWith('cs_')) {
+  if (!sessionId || !sessionId.startsWith('cs_') || sessionId.length <= 10) {
     return {
       statusCode: 400,
       body: JSON.stringify({ error: 'Invalid or missing session ID' }),
