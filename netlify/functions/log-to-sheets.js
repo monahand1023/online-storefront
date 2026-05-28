@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { formatDate, deriveOrderId, parseOrderSummary } from './shared/orderUtils.js';
 
 /**
  * Log a completed Stripe checkout session to Google Sheets.
@@ -16,18 +17,11 @@ export async function logToSheets(session) {
 
   const sheets = google.sheets({ version: 'v4', auth });
 
-  const timestamp = new Date().toLocaleString('en-GB', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).replace(',', '');
+  const timestamp = formatDate(new Date());
 
   // Derive a stable order ID from the Stripe session ID
   const sessionId = session.id || '';
-  const orderId = `JN-${sessionId.replace('cs_test_', '').replace('cs_', '').slice(-16).toUpperCase()}`;
+  const orderId = deriveOrderId(sessionId);
 
   const ordersSummary = metadata.ordersSummary || '';
   const totalAmount = (session.amount_total || 0) / 100;
@@ -62,16 +56,12 @@ export async function logToSheets(session) {
   }
 
   // One row per size/quantity line item
-  const orderLines = ordersSummary.split(', ');
-  const totalQuantity = orderLines.reduce((sum, line) => {
-    const qty = parseInt(line.split('x ')[0].trim()) || 0;
-    return sum + qty;
-  }, 0);
+  const orderLines = parseOrderSummary(ordersSummary);
+  const totalQuantity = orderLines.reduce((sum, item) => sum + item.qty, 0);
   const pricePerShirt = totalQuantity > 0 ? totalAmount / totalQuantity : totalAmount;
 
-  const rows = orderLines.map(line => {
-    const [qtyStr, size] = line.split('x ').map(p => p.trim());
-    const qty = parseInt(qtyStr) || 1;
+  const rows = orderLines.map(item => {
+    const { qty, size } = item;
     const lineAmount = pricePerShirt * qty;
     return [
       timestamp,

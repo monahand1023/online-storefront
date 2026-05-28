@@ -33,8 +33,8 @@
               <span class="label">Amount:</span>
               <span class="value">
                 <template v-if="sessionData?.metadata?.discountApplied === 'true'">
-                  <!-- Reconstruct pre-discount price: divide final total by 0.6 (discount factor) -->
-                  <span class="original-price">${{ formatAmount(sessionData?.amount_total / 0.6) }}</span>
+                  <!-- Reconstruct pre-discount price: divide final total by DISCOUNT_FACTOR -->
+                  <span class="original-price">${{ formatAmount(sessionData?.amount_total / DISCOUNT_FACTOR) }}</span>
                   <span class="final-price">${{ formatAmount(sessionData?.amount_total) }}</span>
                   <span class="discount-tag">40% Off</span>
                 </template>
@@ -98,6 +98,8 @@
 
 <script>
 // Post-payment actions (email, logging) are handled by the Stripe webhook
+
+const DISCOUNT_FACTOR = 0.6; // shared with create-checkout.js
 
 export default {
   data() {

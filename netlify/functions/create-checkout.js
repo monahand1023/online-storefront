@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { BASE_PRICE_CENTS, DISCOUNT_FACTOR } from './shared/config.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const VALID_SIZES = ['S', 'M', 'L', 'XL'];
@@ -57,8 +58,8 @@ export const handler = async (event) => {
       process.env.DISCOUNT_CODE &&
       promoCode.trim().toUpperCase() === process.env.DISCOUNT_CODE.toUpperCase();
 
-    const baseAmount = 2500; // $25.00 in cents
-    const finalAmount = discountApplied ? Math.round(baseAmount * 0.6) : baseAmount;
+    const baseAmount = BASE_PRICE_CENTS; // $25.00 in cents
+    const finalAmount = discountApplied ? Math.round(baseAmount * DISCOUNT_FACTOR) : baseAmount;
 
     const successUrl = `${process.env.URL}/success?session_id={CHECKOUT_SESSION_ID}`;
 

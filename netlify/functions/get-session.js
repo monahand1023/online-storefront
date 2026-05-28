@@ -11,12 +11,12 @@ export const handler = async (event) => {
     };
   }
 
-  const sessionId = event.queryStringParameters.session_id;
+  const sessionId = event.queryStringParameters?.sessionId ?? event.queryStringParameters?.session_id;
 
-  if (!sessionId) {
+  if (!sessionId || !sessionId.startsWith('cs_')) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'Missing session_id parameter' }),
+      body: JSON.stringify({ error: 'Invalid or missing session ID' }),
     };
   }
 
