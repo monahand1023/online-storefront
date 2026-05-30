@@ -11,7 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@netlify/blobs": "^10.7.7",
+    "@netlify/blobs": "^10.7.9",
     "@stripe/stripe-js": "^5.5.0",
     "googleapis": "172.0.0",
     "nodemailer": "8.0.9",
