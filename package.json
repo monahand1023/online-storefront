@@ -29,5 +29,8 @@
     "vue": "3.5.35",
     "vue-router": "5.0.7",
     "vue-tsc": "3.3.2"
+  },
+  "overrides": {
+    "@opentelemetry/core": "^2.8.0"
   }
 }
