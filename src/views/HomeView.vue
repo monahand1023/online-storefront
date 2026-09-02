@@ -1,7 +1,7 @@
 <!-- src/views/HomeView.vue -->
 <template>
   <div class="store-container">
-    <h1>Event T-Shirts</h1>
+    <h1>{{ productName }}s</h1>
 
     <div class="product-card">
       <img src="/shirt-placeholder.jpg" alt="Event T-Shirt" class="product-image">
@@ -168,6 +168,7 @@
 import { defineComponent } from 'vue'
 import { loadStripe, type Stripe } from '@stripe/stripe-js'
 import {
+  PRODUCT_NAME,
   BASE_PRICE_DOLLARS,
   AVAILABLE_SIZES,
   PICKUP_DATES,
@@ -181,6 +182,7 @@ interface ShirtOrder {
 }
 
 interface ComponentData {
+  productName: string
   price: number
   sizes: string[]
   grades: string[]
@@ -201,6 +203,7 @@ interface ComponentData {
 export default defineComponent({
   data(): ComponentData {
     return {
+      productName: PRODUCT_NAME,
       price: BASE_PRICE_DOLLARS,
       sizes: AVAILABLE_SIZES,
       grades: GRADES,

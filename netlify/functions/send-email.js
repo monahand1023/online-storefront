@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { parseOrderSummary } from './shared/orderUtils.js';
-import { ADMIN_EMAIL } from './shared/config.js';
+import { ADMIN_EMAIL, PRODUCT_NAME } from './shared/config.js';
 
 /**
  * Send a confirmation email for a completed Stripe checkout session.
@@ -36,7 +36,7 @@ export async function sendConfirmationEmail(session) {
     from: ADMIN_EMAIL,
     to: email,
     cc: ADMIN_EMAIL,
-    subject: 'Event T-Shirt Order Confirmation',
+    subject: `${PRODUCT_NAME} Order Confirmation`,
     html: `
       <h1>Thank You for Your Order!</h1>
       <h2>Order Details:</h2>

@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { BASE_PRICE_CENTS, DISCOUNT_FACTOR } from './shared/config.js';
+import { BASE_PRICE_CENTS, DISCOUNT_FACTOR, PRODUCT_NAME } from './shared/config.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const VALID_SIZES = ['S', 'M', 'L', 'XL'];
@@ -65,7 +65,7 @@ export const handler = async (event) => {
 
     // Create line items for each shirt order
     const lineItems = orders.map(order => {
-      const productName = sanitizeString('Event T-Shirt');
+      const productName = sanitizeString(PRODUCT_NAME);
       const description = sanitizeString(
         `Size: ${order.size}${discountApplied ? ' (40% Off Applied)' : ''}`
       );

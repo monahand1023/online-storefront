@@ -19,7 +19,7 @@
           <div class="info-grid">
             <div class="info-row">
               <span class="label">Product:</span>
-              <span class="value">Event T-Shirt</span>
+              <span class="value">{{ productName }}</span>
             </div>
             <div class="info-row items-section">
               <span class="label">Orders:</span>
@@ -98,7 +98,7 @@
 <script lang="ts">
 // Post-payment actions (email, logging) are handled by the Stripe webhook
 import { defineComponent } from 'vue'
-import { SUPPORT_EMAIL } from '@/config/store'
+import { PRODUCT_NAME, SUPPORT_EMAIL } from '@/config/store'
 
 /** The subset of the Stripe Checkout Session that get-session.js returns and this page reads. */
 interface SessionData {
@@ -119,6 +119,7 @@ interface SessionData {
 export default defineComponent({
   data() {
     return {
+      productName: PRODUCT_NAME,
       supportEmail: SUPPORT_EMAIL,
       sessionData: null as SessionData | null,
       isLoading: true,

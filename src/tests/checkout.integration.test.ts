@@ -10,7 +10,7 @@
  * No real HTTP calls — all Stripe SDK and side-effect functions are mocked.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { BASE_PRICE_CENTS, DISCOUNT_FACTOR } from '../../netlify/functions/shared/config.js'
+import { BASE_PRICE_CENTS, DISCOUNT_FACTOR, PRODUCT_NAME } from '../../netlify/functions/shared/config.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -89,7 +89,7 @@ function makeCreateCheckoutHandler(stripe: MockStripeCreate, discountCode: strin
       price_data: {
         currency: 'usd',
         product_data: {
-          name: sanitizeString('Event T-Shirt'),
+          name: sanitizeString(PRODUCT_NAME),
           description: sanitizeString(`Size: ${order.size}${discountApplied ? ' (40% Off Applied)' : ''}`),
         },
         unit_amount: finalAmount,
