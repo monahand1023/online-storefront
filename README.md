@@ -1,16 +1,35 @@
-# Online Store Documentation
+# online-storefront
 
-## Overview
+[![Tests](https://github.com/monahand1023/online-storefront/actions/workflows/test.yml/badge.svg)](https://github.com/monahand1023/online-storefront/actions/workflows/test.yml) [![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs&logoColor=white)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Netlify Functions](https://img.shields.io/badge/Netlify-Functions-00C7B7?logo=netlify&logoColor=white)](https://docs.netlify.com/functions/overview/) [![Stripe Checkout](https://img.shields.io/badge/Stripe-Checkout-635BFF?logo=stripe&logoColor=white)](https://docs.stripe.com/payments/checkout) [![License: MIT](https://img.shields.io/github/license/monahand1023/online-storefront)](LICENSE)
 
-This is a Vue.js-based e-commerce application designed for selling products. I originally created this website for my kid's school because they needed an online ordering portal for ordering t-shirts for a school event. After publishing it, I decided to make it an open-source project so anyone could download, build, and deploy this simple and efficient application for their own online store. The application integrates with Stripe for payments, uses Netlify for hosting and serverless functions, and includes features like email notifications and Google Sheets integration for order tracking.
+A minimal, deployable storefront for small selling events: an order form, Stripe Checkout, and a webhook that emails the customer and logs the order to a Google Sheet. No database, no admin panel, no always-on server.
 
-## Tech Stack
+I built it for my kid's school, which needed an ordering portal for an event t-shirt sale, then generalized it so anyone can fork it, edit one config file, and deploy to Netlify.
 
-- Frontend: Vue 3 with TypeScript
-- Payment Processing: Stripe
-- Hosting & Serverless: Netlify
-- Email Service: Nodemailer
-- Order Tracking: Google Sheets API
+## How it works
+
+```mermaid
+flowchart LR
+    Form["Order form<br/>Vue 3 + TypeScript"] --> CC["create-checkout<br/>Netlify function"]
+    CC -->|"validates sizes, quantities<br/>and promo code server-side"| SC["Stripe Checkout<br/>(hosted)"]
+    SC -->|"redirect"| OK["Success page"]
+    SC -->|"checkout.session.completed<br/>(signed webhook)"| WH["stripe-webhook<br/>Netlify function"]
+    WH --> Mail["Confirmation email<br/>Nodemailer"]
+    WH --> Sheet[("Google Sheet<br/>order log")]
+```
+
+Post-payment side effects run from the signed Stripe webhook, never from the browser, so a closed tab or a refresh cannot lose an order.
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Frontend | Vue 3, TypeScript, Vite, Vue Router |
+| Payments | Stripe Checkout (hosted) with signed webhooks |
+| Backend | Netlify serverless functions (Node) |
+| Email | Nodemailer over SMTP |
+| Order log | Google Sheets API via a service account |
+| Tests | Vitest |
 
 ## Project Structure
 
@@ -103,7 +122,7 @@ Key variables:
 ## Deployment Instructions
 
 1. **Prerequisites**
-   - Node.js installed
+   - Node.js 20 or newer
    - Netlify CLI installed
    - Stripe account
    - Google Cloud account with Sheets API enabled
@@ -193,22 +212,6 @@ Edit `src/config/store.ts` to update pickup dates, price, sizes, or programs. Ch
 - Webhook errors logged in Netlify function logs
 - Google Sheets logging errors captured without failing the webhook
 
-## Future Improvements
+## License
 
-1. **Potential Enhancements**
-   - Inventory tracking system
-   - Size availability management
-   - Additional payment methods
-   - Multiple pickup location support
-
-2. **Performance Optimizations**
-   - Image optimization
-   - Component lazy loading
-   - Caching strategies
-
-## Support and Contact
-
-For technical issues:
-- Check Netlify deployment logs
-- Monitor Stripe dashboard for payment issues
-- Review Google Sheets for order tracking
+MIT — see [LICENSE](LICENSE).
