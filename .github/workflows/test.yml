@@ -11,6 +11,7 @@ jobs:
         with: {node-version: '20', cache: 'npm'}
       - run: npm ci
       - run: npm test
+      - run: npm run build   # vue-tsc type-check + vite build; keeps a clean clone buildable
 
   dependency-audit:
     runs-on: ubuntu-latest

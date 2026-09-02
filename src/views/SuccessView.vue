@@ -95,18 +95,35 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 // Post-payment actions (email, logging) are handled by the Stripe webhook
+import { defineComponent } from 'vue'
 import { SUPPORT_EMAIL } from '@/config/store'
 
-export default {
+/** The subset of the Stripe Checkout Session that get-session.js returns and this page reads. */
+interface SessionData {
+  amount_total?: number
+  payment_status?: string
+  customer_details?: { email?: string }
+  metadata?: {
+    discountApplied?: string
+    original_amount_cents?: string
+    ordersSummary?: string
+    pickupDate?: string
+    pickupName?: string
+    program?: string
+    studentGrade?: string
+  }
+}
+
+export default defineComponent({
   data() {
     return {
       supportEmail: SUPPORT_EMAIL,
-      sessionData: null,
+      sessionData: null as SessionData | null,
       isLoading: true,
-      error: null,
-      orderItems: []
+      error: null as string | null,
+      orderItems: [] as string[]
     }
   },
   computed: {
@@ -141,11 +158,12 @@ export default {
           throw new Error('Failed to load order details')
         }
 
-        this.sessionData = await response.json()
+        const data: SessionData = await response.json()
+        this.sessionData = data
 
         // Parse the order summary into readable format
-        if (this.sessionData.metadata?.ordersSummary) {
-          this.orderItems = this.sessionData.metadata.ordersSummary.split(', ').map(order => {
+        if (data.metadata?.ordersSummary) {
+          this.orderItems = data.metadata.ordersSummary.split(', ').map((order: string) => {
             const [quantity, size] = order.split('x ').map(part => part.trim())
             return `${quantity} × Size ${size}`
           })
@@ -157,19 +175,19 @@ export default {
         this.isLoading = false
       }
     },
-    formatAmount(amount) {
+    formatAmount(amount?: number | null) {
       return ((amount || 0) / 100).toFixed(2)
     },
-    formatStatus(status) {
+    formatStatus(status?: string | null) {
       if (!status) return 'Unknown'
       return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
     },
-    formatGrade(grade) {
+    formatGrade(grade?: string | null) {
       if (!grade) return 'Not specified'
       return grade === 'K' ? 'Kindergarten' : `Grade ${grade}`
     }
   }
-}
+})
 </script>
 
 <style scoped>
