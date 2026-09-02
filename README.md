@@ -36,6 +36,7 @@ Post-payment side effects run from the signed Stripe webhook, never from the bro
 ```
 ├── netlify/
 │   └── functions/              # Serverless functions
+│       ├── shared/config.js    # Server-side price + discount factor + admin email
 │       ├── create-checkout.js  # Stripe checkout session creation
 │       ├── get-session.js      # Retrieve session details
 │       ├── log-to-sheets.js    # Google Sheets logging
@@ -46,8 +47,6 @@ Post-payment side effects run from the signed Stripe webhook, never from the bro
 │   ├── config/
 │   │   └── store.ts            # Product config: pickup dates, sizes, price
 │   ├── router/                 # Vue Router configuration
-│   ├── services/
-│   │   └── googleSheetsLogger.ts
 │   ├── tests/                  # Vitest unit tests
 │   └── views/
 │       ├── HomeView.vue        # Main order form
@@ -113,6 +112,8 @@ Key variables:
 | `STRIPE_WEBHOOK_SECRET` | Netlify dashboard | Stripe webhook signature verification |
 | `DISCOUNT_CODE` | Netlify dashboard | Promo code for 40% discount (server-side only) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Netlify dashboard | Email sending |
+| `ADMIN_EMAIL` | Netlify dashboard | Sender address for confirmations; also CC'd on every order |
+| `URL` | Set by Netlify automatically | Public site URL, used for Stripe success/cancel redirects |
 | `GOOGLE_SERVICE_ACCOUNT_CREDENTIALS` | Netlify dashboard | Google Sheets API (full JSON key) |
 | `GOOGLE_SPREADSHEET_ID` | Netlify dashboard | Target spreadsheet |
 | `VITE_STRIPE_PUBLISHABLE_KEY` | Netlify dashboard | Stripe publishable key (safe for browser) |
@@ -181,7 +182,7 @@ Tests cover: size validation, quantity validation, control-character sanitizatio
 
 ### Pickup Dates and Product Config
 
-Edit `src/config/store.ts` to update pickup dates, price, sizes, or programs. Changes take effect on the next build — no hunting through component files.
+Edit `src/config/store.ts` to update the product name, displayed price, pickup dates, sizes, grades, or programs. The price Stripe actually charges lives server-side in `netlify/functions/shared/config.js` (`BASE_PRICE_CENTS`, plus `DISCOUNT_FACTOR`), so change both when you change the price. Changes take effect on the next build.
 
 ### Discount System
 - 40% discount available with a promo code
