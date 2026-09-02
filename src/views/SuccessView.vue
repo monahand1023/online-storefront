@@ -84,7 +84,7 @@
         </div>
 
         <div class="contact-info">
-          <p>Questions about your order? Contact us at orders@example.com</p>
+          <p>Questions about your order? Contact us at {{ supportEmail }}</p>
         </div>
 
         <router-link to="/" class="back-button">
@@ -97,10 +97,12 @@
 
 <script>
 // Post-payment actions (email, logging) are handled by the Stripe webhook
+import { SUPPORT_EMAIL } from '@/config/store'
 
 export default {
   data() {
     return {
+      supportEmail: SUPPORT_EMAIL,
       sessionData: null,
       isLoading: true,
       error: null,

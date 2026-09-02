@@ -182,7 +182,7 @@ Tests cover: size validation, quantity validation, control-character sanitizatio
 
 ### Pickup Dates and Product Config
 
-Edit `src/config/store.ts` to update the product name, displayed price, pickup dates, sizes, grades, or programs. The price Stripe actually charges lives server-side in `netlify/functions/shared/config.js` (`BASE_PRICE_CENTS`, plus `DISCOUNT_FACTOR`), so change both when you change the price. Changes take effect on the next build.
+Edit `src/config/store.ts` to update the product name, displayed price, pickup dates, sizes, grades, programs, and the support email shown on the confirmation page. The price Stripe actually charges lives server-side in `netlify/functions/shared/config.js` (`BASE_PRICE_CENTS`, plus `DISCOUNT_FACTOR`), so change both when you change the price. Changes take effect on the next build.
 
 ### Discount System
 - 40% discount available with a promo code

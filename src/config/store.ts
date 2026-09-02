@@ -20,3 +20,6 @@ export const GRADES: string[] = ['K', '1', '2', '3', '4', '5'];
 
 /** Program options */
 export const PROGRAMS: string[] = ['Spanish', 'Japanese'];
+
+/** Contact address shown on the order-confirmation page */
+export const SUPPORT_EMAIL = 'orders@example.com';
